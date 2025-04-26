@@ -1,0 +1,23 @@
+# Ignorar  carpeta de build
+build/
+
+# Archivos de configuración de ESP-IDF
+sdkconfig
+sdkconfig.old
+
+# Configuración de IDEs
+.vscode/
+.idea/
+*.code-worspace
+.project
+.cproject
+.settings/
+
+# Archivos generados del sistema operativo
+*.DS_Store
+Thumbs.io
+
+# Archivos binarios
+*.bin
+*.elf
+*.map

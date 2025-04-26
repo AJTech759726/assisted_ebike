@@ -1,0 +1,17 @@
+dependencies:
+  idf:
+    source:
+      type: idf
+    version: 5.4.1
+  rc522:
+    dependencies: []
+    source:
+      path: C:\Users\alanj\Documents\ESP32\Workspace\rfid_detection\components\rc522
+      type: local
+    version: 3.3.1
+direct_dependencies:
+- abobija/rc522
+- idf
+manifest_hash: f6f8d746046cbedc79d5ce9a35a4fe105c2ac39a6501dc6871507201dfcb5fbe
+target: esp32
+version: 2.0.0

@@ -1,0 +1,46 @@
+#include <stdio.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "driver/gpio.h"
+#include "rc522.h"
+#include "rc522_types.h"
+
+#define TAG "RC522"
+#define LED_GPIO		GPIO_NUM_2
+
+void app_main(void)
+{
+	// Configurar el pin del LED como salida
+	esp_rom_gpio_pad_select_gpio(LED_GPIO);
+	gpio_set_direction(LED_GPIO, GPIO_MODE_OUTPUT);
+	gpio_set_level(LED_GPIO, 0);
+
+	// Configuración el RC522
+	rc522_config_t config = {
+		.spi.host_id = SPI2_HOST,
+		.spi.miso_gpio = GPIO_NUM_19,
+		.spi.mosi_gpio = GPIO_NUM_23,
+		.spi.sck_gpio = GPIO_NUM_18,
+		.spi.cs_gpio = GPIO_NUM_5,
+		.reset_gpio = GPIO_NUM_22,
+	};
+
+	rc522_handle_t rc522;
+	rc522_create(&config, &rc522);
+	rc522_start(rc522);
+
+	while(1) {
+		uint8_t serial_no[10];
+		uint8_t serial_no_len;
+		
+		if (rc522_request() == ESP_OK) {
+			if (rc522_get_card_serial(serial_no, &serial_no_len) == ESP_OK) {
+				gpio_set_level(LED_GPIO, 1);				// Enciender LED
+
+		} else {
+			gpio_set_level(LED_GPIO, 0);				// Apaga LED
+		}
+
+		vTaskDelay(pdMS_TO_TICKS(500));
+
+}
