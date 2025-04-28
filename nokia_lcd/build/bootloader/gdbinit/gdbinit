@@ -1,2 +1,2 @@
-source C:/Users/alanj/Documents/ESP32/Workspace/nokia_lcd/build/bootloader/gdbinit/symbols
-source C:/Users/alanj/Documents/ESP32/Workspace/nokia_lcd/build/bootloader/gdbinit/connect
+source /home/ajdj/esp/workspace/ebike_project/nokia_lcd/build/bootloader/gdbinit/symbols
+source /home/ajdj/esp/workspace/ebike_project/nokia_lcd/build/bootloader/gdbinit/connect

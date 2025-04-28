@@ -4,4 +4,4 @@ cmake_minimum_required(VERSION 3.16)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(nokia_lcd)
-set(EXTRA_COMPONENT_DIRS components/pcd8544)
+set(EXTRA_COMPONENT_DIRS components)
