@@ -6,7 +6,7 @@
 
 static const char *TAG = "NOKIA5110";
 
-// Función interna para enviar byte por SPI
+// Internal function to send bytes via SPI
 static esp_err_t lcd_send_byte(lcd_nokia5110_priv_t *lcd, uint8_t byte, bool is_data) {
     gpio_set_level(lcd->pin_dc, is_data ? 1 : 0);
     
@@ -27,13 +27,13 @@ void lcd_write_data(lcd_nokia5110_priv_t *lcd, uint8_t data) {
 	lcd_send_byte(lcd, data, true);
 }
 
-// Inicialización del LCD
+// LCD initialization
 esp_err_t lcd_nokia5110_init(const lcd_nokia5110_config_t *config, lcd_nokia5110_t *lcd) {
     esp_err_t ret;
     lcd_nokia5110_priv_t *priv = calloc(1, sizeof(lcd_nokia5110_priv_t));
     if (!priv) return ESP_ERR_NO_MEM;
 
-    // Configurar pines GPIO
+    // GPIO pins configuration
     priv->pin_dc = config->pin_dc;
     priv->pin_reset = config->pin_rst;
     priv->pin_cs = config->pin_cs;
@@ -41,7 +41,7 @@ esp_err_t lcd_nokia5110_init(const lcd_nokia5110_config_t *config, lcd_nokia5110
     priv->inverted = false;
     priv->spi_host = config->spi_host;
 
-    // Configurar pines
+    // Pins configuration
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << priv->pin_dc) | (1ULL << priv->pin_reset),
         .mode = GPIO_MODE_OUTPUT,
@@ -54,7 +54,7 @@ esp_err_t lcd_nokia5110_init(const lcd_nokia5110_config_t *config, lcd_nokia5110
     gpio_set_level(priv->pin_reset, 1);
     vTaskDelay(pdMS_TO_TICKS(100));
 
-    // Configurar SPI
+    // SPI configuration
     spi_bus_config_t buscfg = {
         .miso_io_num = -1,
         .mosi_io_num = config->pin_din,
@@ -70,7 +70,7 @@ esp_err_t lcd_nokia5110_init(const lcd_nokia5110_config_t *config, lcd_nokia5110
         .queue_size = 7,
     };
 
-    // Inicializar bus SPI y dispositivo
+    // Initialize SPI bus and device
     ret = spi_bus_initialize(config->spi_host, &buscfg, SPI_DMA_DISABLED);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "SPI init failed: %s", esp_err_to_name(ret));
@@ -85,23 +85,23 @@ esp_err_t lcd_nokia5110_init(const lcd_nokia5110_config_t *config, lcd_nokia5110
         return ret;
     }
 
-    // Inicializar pantalla
+    // Initialize screen
     lcd_send_byte(priv, CMD_FUNCTION_SET | 0x01, false); 				// Extended instructions
-    lcd_send_byte(priv, CMD_SET_VOP | priv->contrast, false);
+    lcd_send_byte(priv, CMD_SET_VOP | priv->contrast, false); 				// Contrast
     lcd_send_byte(priv, CMD_TEMP_CONTROL | 0x02, false); 				// Temp coefficient
     lcd_send_byte(priv, CMD_BIAS_SYSTEM | 0x03, false); 				// Bias mode
     lcd_send_byte(priv, CMD_FUNCTION_SET, false); 					// Basic instructions
     lcd_send_byte(priv, CMD_DISPLAY_CONTROL | 0x04, false); 				// Normal mode
 
-    // Limpiar pantalla
+    // Clear screen
     lcd_nokia5110_clear((lcd_nokia5110_t)priv);
     
     *lcd = (lcd_nokia5110_t)priv;
-    ESP_LOGI(TAG, "LCD inicializado correctamente");
+    ESP_LOGI(TAG, "LCD initialized successfully");
     return ESP_OK;
 }
 
-// Implementación de funciones públicas
+// Implementation of public functions
 
 void lcd_nokia5110_clear(lcd_nokia5110_t lcd) {
     lcd_nokia5110_priv_t *priv = (lcd_nokia5110_priv_t *)lcd;
@@ -123,7 +123,7 @@ void lcd_nokia5110_write_char(lcd_nokia5110_t lcd, char c) {
         }
     }
     
-    // Espacio entre caracteres
+    // Space between characters
     if (priv->x_pos < LCD_WIDTH) {
         priv->framebuffer[priv->y_pos][priv->x_pos] = priv->inverted ? 0xFF : 0x00;
         priv->x_pos++;
@@ -165,17 +165,17 @@ void lcd_nokia5110_deinit(lcd_nokia5110_t lcd) {
 	if (lcd) {
 		lcd_nokia5110_priv_t *priv = (lcd_nokia5110_priv_t *)lcd;
 
-		// 1. Remueve el dispositivo SPI
+		// 1. Remove the SPI device
 		if (priv->spi_dev) {
 			spi_bus_remove_device(priv->spi_dev);
 		}
 
-		// 2. Libera el bus SPI (usando el host)
+		// 2. Release the SPI bus (usign the host)
 		if (priv->spi_host) {
 			spi_bus_free(priv->spi_host);
 		}
 
-		// 3. Libera la memoria
+		// 3. Free memory
 		free(priv);
 	}
 }
