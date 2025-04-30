@@ -3268,6 +3268,64 @@
                         "id": "bootloader-config-log-format",
                         "title": "Format",
                         "type": "menu"
+                    },
+                    {
+                        "children": [
+                            {
+                                "children": [],
+                                "depends_on": null,
+                                "help": null,
+                                "id": "BOOTLOADER_LOG_MODE_TEXT_EN",
+                                "name": "BOOTLOADER_LOG_MODE_TEXT_EN",
+                                "range": null,
+                                "title": null,
+                                "type": "bool"
+                            },
+                            {
+                                "children": [],
+                                "depends_on": null,
+                                "help": null,
+                                "id": "BOOTLOADER_LOG_MODE_BINARY_EN",
+                                "name": "BOOTLOADER_LOG_MODE_BINARY_EN",
+                                "range": null,
+                                "title": null,
+                                "type": "bool"
+                            },
+                            {
+                                "children": [
+                                    {
+                                        "children": [],
+                                        "depends_on": "<choice BOOTLOADER_LOG_MODE>",
+                                        "help": "Enables text-based logging, where log messages are stored in a human-readable format.\nThis mode is useful for development and debugging, as it allows logs to be easily\nread and interpreted without additional processing.",
+                                        "id": "BOOTLOADER_LOG_MODE_TEXT",
+                                        "name": "BOOTLOADER_LOG_MODE_TEXT",
+                                        "range": null,
+                                        "title": "Text Log Mode",
+                                        "type": "bool"
+                                    },
+                                    {
+                                        "children": [],
+                                        "depends_on": "<choice BOOTLOADER_LOG_MODE>",
+                                        "help": "Enables binary logging with host-side format string expansion. In this mode, the\nformat argument of ESP_LOGx, ESP_EARLY_LOG, and ESP_DRAM_LOG macros is stored in a\nNOLOAD section, not included in the final binary file. This reduces flash usage by\napproximately 10% - 35%. The esp_log() function uses the binary log handler to output\nmessages. Instead of sending the full log string, the chip transmits only the\naddresses of these strings (if present in the ELF file). If the format string\ncannot be found in the ELF file, the chip sends the entire string. The host-side\nmonitor tool, which has access to the ELF file, reconstructs the log message using\nthe format string.\nThis reduces firmware size by eliminating format strings from\nflash memory and removing the usage of printf-like functions, potentially freeing up\na few kilobytes of space. To further reduce firmware size, wrap string data with ESP_LOG_ATTR_STR.",
+                                        "id": "BOOTLOADER_LOG_MODE_BINARY",
+                                        "name": "BOOTLOADER_LOG_MODE_BINARY",
+                                        "range": null,
+                                        "title": "Binary Log Mode",
+                                        "type": "bool"
+                                    }
+                                ],
+                                "depends_on": null,
+                                "help": null,
+                                "id": "bootloader-config-log-settings-log-mode",
+                                "name": "BOOTLOADER_LOG_MODE",
+                                "title": "Log Mode",
+                                "type": "choice"
+                            }
+                        ],
+                        "depends_on": null,
+                        "id": "bootloader-config-log-settings",
+                        "title": "Settings",
+                        "type": "menu"
                     }
                 ],
                 "depends_on": null,
@@ -9302,6 +9360,64 @@
                         "depends_on": null,
                         "id": "component-config-log-format",
                         "title": "Format",
+                        "type": "menu"
+                    },
+                    {
+                        "children": [
+                            {
+                                "children": [],
+                                "depends_on": null,
+                                "help": null,
+                                "id": "LOG_MODE_TEXT_EN",
+                                "name": "LOG_MODE_TEXT_EN",
+                                "range": null,
+                                "title": null,
+                                "type": "bool"
+                            },
+                            {
+                                "children": [],
+                                "depends_on": null,
+                                "help": null,
+                                "id": "LOG_MODE_BINARY_EN",
+                                "name": "LOG_MODE_BINARY_EN",
+                                "range": null,
+                                "title": null,
+                                "type": "bool"
+                            },
+                            {
+                                "children": [
+                                    {
+                                        "children": [],
+                                        "depends_on": "<choice LOG_MODE>",
+                                        "help": "Enables text-based logging, where log messages are stored in a human-readable format.\nThis mode is useful for development and debugging, as it allows logs to be easily\nread and interpreted without additional processing.",
+                                        "id": "LOG_MODE_TEXT",
+                                        "name": "LOG_MODE_TEXT",
+                                        "range": null,
+                                        "title": "Text Log Mode",
+                                        "type": "bool"
+                                    },
+                                    {
+                                        "children": [],
+                                        "depends_on": "<choice LOG_MODE>",
+                                        "help": "Enables binary logging with host-side format string expansion. In this mode, the\nformat argument of ESP_LOGx, ESP_EARLY_LOG, and ESP_DRAM_LOG macros is stored in a\nNOLOAD section, not included in the final binary file. This reduces flash usage by\napproximately 10% - 35%. The esp_log() function uses the binary log handler to output\nmessages. Instead of sending the full log string, the chip transmits only the\naddresses of these strings (if present in the ELF file). If the format string\ncannot be found in the ELF file, the chip sends the entire string. The host-side\nmonitor tool, which has access to the ELF file, reconstructs the log message using\nthe format string.\nThis reduces firmware size by eliminating format strings from\nflash memory and removing the usage of printf-like functions, potentially freeing up\na few kilobytes of space. To further reduce firmware size, wrap string data with ESP_LOG_ATTR_STR.",
+                                        "id": "LOG_MODE_BINARY",
+                                        "name": "LOG_MODE_BINARY",
+                                        "range": null,
+                                        "title": "Binary Log Mode",
+                                        "type": "bool"
+                                    }
+                                ],
+                                "depends_on": null,
+                                "help": null,
+                                "id": "component-config-log-settings-log-mode",
+                                "name": "LOG_MODE",
+                                "title": "Log Mode",
+                                "type": "choice"
+                            }
+                        ],
+                        "depends_on": null,
+                        "id": "component-config-log-settings",
+                        "title": "Settings",
                         "type": "menu"
                     },
                     {
