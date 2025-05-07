@@ -27,24 +27,43 @@ The system is designed to display bicycle status information, motor assistance, 
 ## Project structure
 
 workspace/
+
 ├── main/                       # Código principal del proyecto
+
 │   ├── main.c                 # Punto de entrada de la aplicación (app_main)
+
 │   ├── CMakeLists.txt         # Configuración CMake para esta subcarpeta
+
 │   └── ...                    # Otros archivos fuente
+
 ├── components/                # Librerías personalizadas
+
 │   └── lcd_nokia5110/         # Librería para pantalla Nokia 5110 LCD
+
 │       ├── src/               # Código fuente de la librería
+
 │       │   ├── lcd_nokia5110.c
+
 │       │   └── font_5x7.c
+
 │       ├── private_include/   # Headers internos (uso privado)
+
 │       │   └── lcd_nokia5110_priv.h
+
 │       ├── include/           # Headers públicos (API de la librería)
+
 │       │   ├── lcd_nokia5110.h
+
 │       │   └── font_5x7.h
+
 │       └── CMakeLists.txt     # Configuración CMake del componente
+
 ├── sdkconfig                  # Archivo de configuración generado por `menuconfig`
+
 ├── CMakeLists.txt             # Configuración CMake del proyecto raíz
+
 ├── .gitignore                 # Archivos/carpetas que Git debe ignorar
+
 └── README.md                  # Documentación del proyecto
 
 
