@@ -27,19 +27,25 @@ The system is designed to display bicycle status information, motor assistance, 
 ## Project structure
 
 workspace/
-├── main/                		# Main project code  
-│   ├── main.c  
-│   ├── CMakeLists.txt  
-│   └── ...  
-├── components/          		# Custom libraries  
-│   └── lcd_nokia5110/			# LCD screen library  
-│       ├── lcd_nokia5110.c  
-│       ├── lcd_nokia5110.h  
-│       └── CMakeLists.txt  
-├── sdkconfig            		# Project configuration  
-├── CMakeLists.txt  
-├── .gitignore  
-└── README.md  
+├── main/ 				# Main project code
+│   ├── main.c
+│   ├── CMakeLists.txt
+│   └── ...
+├── components/ 			# Custom libraries
+│   └── lcd_nokia5110/ 			# LCD screen library
+│       ├── src/
+│	│   ├── lcd_nokia5110.c
+│	│   └── font_5x7.c
+│       ├── private_include/
+│	│   └── lcd_nokia5110_priv.h
+│	├── include/
+│	│   ├── lcd_nokia5110.h
+│	│   └── font_5x7.h
+│       └── CMakeLists.txt
+├── sdkconfig 				# Project configuration
+├── CMakeLists.txt
+├── .gitignore
+└── README.md
 
 ## How to compile and upload
 1. Set up the ESP-IDF environment.
@@ -62,11 +68,16 @@ idf.py build
 ```
 
 5. Flash the firmware to the ESP32:
+
 ```bash
 idf.py -p PORT flash
 ```
+
 6. Monitor the output:
+
+```bash
 idf.py monitor
+```
 
 ## Project status
 - [X] Initial project setup.
