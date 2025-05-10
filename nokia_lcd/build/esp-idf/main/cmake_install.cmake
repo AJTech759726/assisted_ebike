@@ -1,4 +1,4 @@
-# Install script for directory: /home/ajdj/esp/workspace/ebike_project/nokia_lcd/main
+# Install script for directory: /home/ajdj/esp/workspace/assisted_ebike_project/nokia_lcd/main
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

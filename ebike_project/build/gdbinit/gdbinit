@@ -1,2 +1,2 @@
-source C:/Users/alanj/Documents/ESP32/Workspace/ebike_project/build/gdbinit/symbols
-source C:/Users/alanj/Documents/ESP32/Workspace/ebike_project/build/gdbinit/connect
+source /home/ajdj/esp/workspace/assisted_ebike_project/ebike_project/build/gdbinit/symbols
+source /home/ajdj/esp/workspace/assisted_ebike_project/ebike_project/build/gdbinit/connect

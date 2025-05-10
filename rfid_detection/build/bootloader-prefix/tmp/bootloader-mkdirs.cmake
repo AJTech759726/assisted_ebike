@@ -10,18 +10,18 @@ if(NOT EXISTS "C:/Espressif/frameworks/esp-idf-v5.4.1/components/bootloader/subp
   file(MAKE_DIRECTORY "C:/Espressif/frameworks/esp-idf-v5.4.1/components/bootloader/subproject")
 endif()
 file(MAKE_DIRECTORY
-  "C:/Users/alanj/Documents/ESP32/Workspace/rfid_detection/build/bootloader"
-  "C:/Users/alanj/Documents/ESP32/Workspace/rfid_detection/build/bootloader-prefix"
-  "C:/Users/alanj/Documents/ESP32/Workspace/rfid_detection/build/bootloader-prefix/tmp"
-  "C:/Users/alanj/Documents/ESP32/Workspace/rfid_detection/build/bootloader-prefix/src/bootloader-stamp"
-  "C:/Users/alanj/Documents/ESP32/Workspace/rfid_detection/build/bootloader-prefix/src"
-  "C:/Users/alanj/Documents/ESP32/Workspace/rfid_detection/build/bootloader-prefix/src/bootloader-stamp"
+  "C:/Users/alanj/Documents/ESP32/Workspace/basic/build/bootloader"
+  "C:/Users/alanj/Documents/ESP32/Workspace/basic/build/bootloader-prefix"
+  "C:/Users/alanj/Documents/ESP32/Workspace/basic/build/bootloader-prefix/tmp"
+  "C:/Users/alanj/Documents/ESP32/Workspace/basic/build/bootloader-prefix/src/bootloader-stamp"
+  "C:/Users/alanj/Documents/ESP32/Workspace/basic/build/bootloader-prefix/src"
+  "C:/Users/alanj/Documents/ESP32/Workspace/basic/build/bootloader-prefix/src/bootloader-stamp"
 )
 
 set(configSubDirs )
 foreach(subDir IN LISTS configSubDirs)
-    file(MAKE_DIRECTORY "C:/Users/alanj/Documents/ESP32/Workspace/rfid_detection/build/bootloader-prefix/src/bootloader-stamp/${subDir}")
+    file(MAKE_DIRECTORY "C:/Users/alanj/Documents/ESP32/Workspace/basic/build/bootloader-prefix/src/bootloader-stamp/${subDir}")
 endforeach()
 if(cfgdir)
-  file(MAKE_DIRECTORY "C:/Users/alanj/Documents/ESP32/Workspace/rfid_detection/build/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
+  file(MAKE_DIRECTORY "C:/Users/alanj/Documents/ESP32/Workspace/basic/build/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
 endif()

@@ -1,2 +1,2 @@
-source /home/ajdj/esp/workspace/ebike_project/nokia_lcd/build/bootloader/gdbinit/symbols
-source /home/ajdj/esp/workspace/ebike_project/nokia_lcd/build/bootloader/gdbinit/connect
+source /home/ajdj/esp/workspace/assisted_ebike_project/nokia_lcd/build/bootloader/gdbinit/symbols
+source /home/ajdj/esp/workspace/assisted_ebike_project/nokia_lcd/build/bootloader/gdbinit/connect

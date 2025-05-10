@@ -22,4 +22,4 @@ set confirm off
 set confirm on
 
 # Load application symbols
-file /home/ajdj/esp/workspace/ebike_project/nokia_lcd/build/bootloader/bootloader.elf
+file /home/ajdj/esp/workspace/assisted_ebike_project/nokia_lcd/build/bootloader/bootloader.elf

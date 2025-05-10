@@ -1,17 +1,20 @@
 dependencies:
+  abobija/rc522:
+    component_hash: 45869b7a266329f19dbc84a878c97acdd20535ff7cdc4ed9c8cdbff7f8420d70
+    dependencies:
+    - name: idf
+      require: private
+      version: ^5.0
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 3.3.1
   idf:
     source:
       type: idf
     version: 5.4.1
-  rc522:
-    dependencies: []
-    source:
-      path: C:\Users\alanj\Documents\ESP32\Workspace\rfid_detection\components\rc522
-      type: local
-    version: 3.3.1
 direct_dependencies:
 - abobija/rc522
-- idf
-manifest_hash: f6f8d746046cbedc79d5ce9a35a4fe105c2ac39a6501dc6871507201dfcb5fbe
+manifest_hash: c7553f2bb26d5d0f344d9d6a68931c0d4388c3a77a688832ab34bfc1a437323a
 target: esp32
 version: 2.0.0

@@ -18,8 +18,8 @@ end
 
 # Load bootloader symbols
 set confirm off
-    add-symbol-file C:/Users/alanj/Documents/ESP32/Workspace/rfid_detection/build/bootloader/bootloader.elf
+    add-symbol-file C:/Users/alanj/Documents/ESP32/Workspace/basic/build/bootloader/bootloader.elf
 set confirm on
 
 # Load application symbols
-file C:/Users/alanj/Documents/ESP32/Workspace/rfid_detection/build/rfid_detection.elf
+file C:/Users/alanj/Documents/ESP32/Workspace/basic/build/basic.elf

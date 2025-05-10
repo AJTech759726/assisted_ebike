@@ -1,88 +1,145 @@
-#include <stdio.h>
+#include <esp_log.h>
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "driver/spi_master.h"
 #include "driver/gpio.h"
 #include "rc522.h"
-#include "pcd8544.h"
+#include "driver/rc522_spi.h"
+#include "rc522_picc.h"
 
-// Pines
-#define RCWL_PIN		GPIO_NUM_34
-#define LED_PIN			GPIO_NUM_2
+// Hardware configuration
+#define RCWL_GPIO		GPIO_NUM_34				// Movement sensor RCWL-0516
 
-#define RFID_CS_PIN		GPIO_NUM_5
-#define RFID_SC_PIN		GPIO_NUM_22
-#define RFID_RST_PIN		GPIO_NUM_20
+// RFID RC522 TAG Reader configuration
+#define RC522_SPI_HOST		SPI3_HOST				// RFID RC522 TAG Reader
+#define RC522_MISO_GPIO		GPIO_NUM_19
+#define RC522_MOSI_GPIO		GPIO_NUM_23
+#define RC522_SCLK_GPIO		GPIO_NUM_18
+#define RC522_SDA_GPIO		GPIO_NUM_5
+#define RC522_RST_GPIO		GPIO_NUM_22				// soft-reset
 
-#define LCD_RST_PIN		GPIO_NUM_21
-#define LCD_CE_PIN		GPIO_NUM_15
-#define LCD_DC_PIN		GPIO_NUM_17
-#define LCD_DIN_PIN		GPIO_NUM_23
-#define LCD_CLK_PIN		GPIO_NUM_18
-#define LCD_BL_PIN		GPIO_NUM_4
+#define BLIND_SPOT_LIGHT_GPIO	GPIO_NUM_25				// Blind spot lights
+#define SYSTEM_ACTIVE_GPIO	GPIO_NUM_2				// System active indicator LED
+#define POWER_RELAY_GPIO	GPIO_NUM_21				// Relay activates electrical system
+#define EMERGENCY_BUTTON_GPIO	GPIO_NUM_27				// Emergency stop button
 
-void rcwl_task(void *pvParameter) {
-	esp_rom_gpio_pad_select_gpio(RCWL_PIN);
-	gpio_set_direction(RCWL_PIN, GPIO_MODE_INPUT);
-	
-	gpio_pad_select_gpio(LED_PIN);
-	gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
+static bool system_activated = false;
 
-	while(1) {
-		int presence = gpio_get_level(RCWL_PIN);
-		gpio_set_level(LED_PIN, presence);
-		vTaskDelay(pdMS_TO_TICKS(500));
+// RFID Authorized tag
+static rc522_spi_config_t driver_config = {
+	.host_id = RC522_SPI_HOST,
+	.bus_config = &(spi_bus_config_t) {
+		.miso_io_num = RC522_MISO_GPIO,
+		.mosi_io_num = RC522_MOSI_GPIO,
+		.sclk_io_num = RC522_SCLK_GPIO,
+	},
+
+	.dev_config = {
+		.spics_io_num = RC522_SDA_GPIO,
+	},
+
+	.rst_io_num = RC522_RST_GPIO,
+};
+
+static rc522_handle_t scanner;
+static rc522_driver_handle_t driver;
+static bool waiting_tag = true;				// Initial state: waiting for tag to activate
+
+// Callback RFID
+static void on_rfid_detection(void *arg, esp_event_base_t base,
+				int32_t event_id, void *data) {
+	rc522_picc_state_changed_event_t *event = (rc522_picc_state_changed_event_t *)data;
+	rc522_picc_t *picc = event->picc;
+
+	if (waiting_tag && picc->state == RC522_PICC_STATE_ACTIVE) {
+		ESP_LOGI("RFID", "Authorized TAG detected - Activating system");
+		system_activated = true;
+		waiting_tag = false;
+		gpio_set_level(POWER_RELAY_GPIO, 1);				// Activate electrical system
+		gpio_set_level(SYSTEM_ACTIVE_GPIO, 1);
 	}
+}
+	
+void setup_gpio() {
+	// INPUT Configuration
+	gpio_config_t input_conf = {
+		.pin_bit_mask = (1ULL << RCWL_GPIO) | (1ULL << EMERGENCY_BUTTON_GPIO),
+		.mode = GPIO_MODE_INPUT,
+		.pull_up_en = GPIO_PULLUP_ENABLE,				// Use pull-up for the button
+		.intr_type = GPIO_INTR_DISABLE
+	};
+
+	gpio_config(&input_conf);
+
+	// OUTPUT Configuration
+	gpio_config_t output_conf = {
+		.pin_bit_mask = (1ULL << BLIND_SPOT_LIGHT_GPIO) |
+				(1ULL << SYSTEM_ACTIVE_GPIO) |
+				(1ULL << POWER_RELAY_GPIO),
+		.mode = GPIO_MODE_OUTPUT
+	};
+
+	gpio_config(&output_conf);
+}
+
+void shutdown_system() {
+	ESP_LOGI("SYSTEM", "Shutting down due to emergency");
+	system_activated = false;
+	waiting_tag = true;
+	gpio_set_level(POWER_RELAY_GPIO, 0);
+	gpio_set_level(SYSTEM_ACTIVE_GPIO, 0);
+	gpio_set_level(BLIND_SPOT_LIGHT_GPIO, 0);
 }
 
 void app_main(void)
 {
-	// Inicializar RCWL_0516
-	xTaskCreate(&rcwl_task, "rcwl_task", 2048, NULL, 5, NULL);
+	ESP_LOGI("SYSTEM", "EBicycle initializing");
 
-	// Inicializar RFID RC522
-	rc522_config_t config = {
-		.spi.host = HSPI_HOST,
-		.spi.miso_gpio = GPIO_NUM_19,
-		.spi.mosi_gpio = GPIO_NUM_23,
-		.spi.sck_gpio = GPIO_NUM_18,
-		.spi.sda_gpio = RFID_CS_PIN,
-		.rst_gpio = RFID_RST_PIN,
-	};
-	rc522_init(&config);
+	rc522_spi_create(&driver_config, &driver);
+	rc522_driver_install(driver);
 
-	// Inicializar pantalla Nokia 5110
-	pcd8544_config_t lcd_config = {
-		.rst_pin = LCD_RST_PIN,
-		.ce_pin = LCD_CE_PIN,
-		.dc_pin = LCD_DC_PIN,
-		.din_pin = LCD_DIN_PIN,
-		.clk_pin = LCD_CLK_PIN,
-		.bl_pin = LCD_BL_PIN,
+	rc522_config_t scanner_config = {
+		.driver = driver,
 	};
-	pcd8544_init(&lcd_config);
-	pcd8544_clear();
-	pcd8544_draw_string(0, 0, "Sistema iniciado");
-	pcd8544_refresh();
+
+	rc522_create(&scanner_config, &scanner);
+	rc522_register_events(scanner, RC522_EVENT_PICC_STATE_CHANGED,
+				on_rfid_detection, NULL);
+	rc522_start(scanner);
+
+	// Setup GPIOs
+	setup_gpio();
+
+	// Initial state
+	shutdown_system();
 
 	while(1) {
-		// Lectura de tarjeta RFID
-		uint8_t uid[10];
-		uint8_t uid_len;
-		if (rc522_read_card_serial(uid, &uid_len) == ESP_OK) {
-			printf("Tarjeta detectada: ");
-			for (int i = 0; i < uid_len; i++) {
-				printf("%02X ", uid[i]);
-			}
-			printf("\n");
+		// Verify emergency button
+		if (gpio_get_level(EMERGENCY_BUTTON_GPIO) == 0) {
+			vTaskDelay(pdMS_TO_TICKS(50));				// Debounce
+			
+			if (gpio_get_level(EMERGENCY_BUTTON_GPIO) == 0) {
+				shutdown_system();
+				
+				while(gpio_get_level(EMERGENCY_BUTTON_GPIO) == 0){
+					vTaskDelay(pdMS_TO_TICKS(100));
+				}
 
-			// Mostrar en pantalla
-			pcd8544_clear();
-			pcd8544_draw_string(0, 0, "Tarjeta:");
-			char uid_str[30];
-			snprintf(uid_str, sizeof(uid_str), "%02X%02X%02X%02X", uid[0], uid[1], uid[2], uid[3]);
-			pcd8544_draw_string(0, 1, uid_str);
-			pcd8544_refresh();
+				ESP_LOGI("SYSTEM", "Waiting authorized TAG...");
+			}
 		}
+		
+		// Blind spot control
+		if (system_activated) {
+			bool movement = gpio_get_level(RCWL_GPIO);
+			gpio_set_level(BLIND_SPOT_LIGHT_GPIO, movement);
+
+			if (movement) {
+				ESP_LOGI("SENSOR", "Blind spot detected!");
+			}
+		}
+
 		vTaskDelay(pdMS_TO_TICKS(1000));
 	}
 

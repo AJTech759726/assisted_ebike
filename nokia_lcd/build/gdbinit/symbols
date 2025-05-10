@@ -18,8 +18,8 @@ end
 
 # Load bootloader symbols
 set confirm off
-    add-symbol-file /home/ajdj/esp/workspace/ebike_project/nokia_lcd/build/bootloader/bootloader.elf
+    add-symbol-file /home/ajdj/esp/workspace/assisted_ebike_project/nokia_lcd/build/bootloader/bootloader.elf
 set confirm on
 
 # Load application symbols
-file /home/ajdj/esp/workspace/ebike_project/nokia_lcd/build/nokia_lcd.elf
+file /home/ajdj/esp/workspace/assisted_ebike_project/nokia_lcd/build/nokia_lcd.elf

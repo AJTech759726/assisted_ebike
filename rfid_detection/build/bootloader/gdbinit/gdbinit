@@ -1,2 +1,2 @@
-source C:/Users/alanj/Documents/ESP32/Workspace/rfid_detection/build/bootloader/gdbinit/symbols
-source C:/Users/alanj/Documents/ESP32/Workspace/rfid_detection/build/bootloader/gdbinit/connect
+source C:/Users/alanj/Documents/ESP32/Workspace/basic/build/bootloader/gdbinit/symbols
+source C:/Users/alanj/Documents/ESP32/Workspace/basic/build/bootloader/gdbinit/connect

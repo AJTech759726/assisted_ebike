@@ -1,5 +1,6 @@
 #include "lcd_nokia5110.h"
 #include "lcd_nokia5110_priv.h"
+#include <string.h>
 #include "font_5x7.h"
 #include "esp_log.h"
 #include "freertos/task.h"

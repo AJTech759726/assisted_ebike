@@ -525,7 +525,7 @@
     "IDF_TOOLCHAIN_GCC": true,
     "LCD_ENABLE_DEBUG_LOG": false,
     "LEDC_CTRL_FUNC_IN_IRAM": false,
-    "LOG_COLORS": false,
+    "LOG_COLORS": true,
     "LOG_DEFAULT_LEVEL": 3,
     "LOG_DEFAULT_LEVEL_DEBUG": false,
     "LOG_DEFAULT_LEVEL_ERROR": false,

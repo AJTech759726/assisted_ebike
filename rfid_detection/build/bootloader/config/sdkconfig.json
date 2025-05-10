@@ -278,7 +278,7 @@
     "IDF_TARGET_ESP32": true,
     "IDF_TOOLCHAIN": "gcc",
     "IDF_TOOLCHAIN_GCC": true,
-    "LOG_COLORS": false,
+    "LOG_COLORS": true,
     "LOG_DEFAULT_LEVEL": 3,
     "LOG_DEFAULT_LEVEL_DEBUG": false,
     "LOG_DEFAULT_LEVEL_ERROR": false,
