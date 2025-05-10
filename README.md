@@ -26,46 +26,28 @@ The system is designed to display bicycle status information, motor assistance, 
 
 ## Project structure
 
+```text
 workspace/
-
-├── main/                       # Código principal del proyecto
-
-│   ├── main.c                 # Punto de entrada de la aplicación (app_main)
-
-│   ├── CMakeLists.txt         # Configuración CMake para esta subcarpeta
-
-│   └── ...                    # Otros archivos fuente
-
-├── components/                # Librerías personalizadas
-
-│   └── lcd_nokia5110/         # Librería para pantalla Nokia 5110 LCD
-
-│       ├── src/               # Código fuente de la librería
-
+├── main/                          	# Main project code
+│   ├── main.c                     	# Application entry point (app_main)
+│   ├── CMakeLists.txt             	# CMake configuration for this subfolder
+│   └── ...                        	# Other source files
+├── managed_components/                 # Custom libraries
+│   └── lcd_nokia5110/             	# Library for Nokia 5110 LCD screen
+│       ├── src/                   	# Library source code
 │       │   ├── lcd_nokia5110.c
-
 │       │   └── font_5x7.c
-
-│       ├── private_include/   # Headers internos (uso privado)
-
+│       ├── private_include/       	# Internal headers (private use)
 │       │   └── lcd_nokia5110_priv.h
-
-│       ├── include/           # Headers públicos (API de la librería)
-
+│       ├── include/               	# Public headers (library API)
 │       │   ├── lcd_nokia5110.h
-
 │       │   └── font_5x7.h
-
-│       └── CMakeLists.txt     # Configuración CMake del componente
-
-├── sdkconfig                  # Archivo de configuración generado por `menuconfig`
-
-├── CMakeLists.txt             # Configuración CMake del proyecto raíz
-
-├── .gitignore                 # Archivos/carpetas que Git debe ignorar
-
-└── README.md                  # Documentación del proyecto
-
+│       └── CMakeLists.txt
+├── sdkconfig                      	# Project configuration
+├── CMakeLists.txt
+├── .gitignore
+└── README.md
+```
 
 ## How to compile and upload
 1. Set up the ESP-IDF environment.
