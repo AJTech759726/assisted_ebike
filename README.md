@@ -24,6 +24,26 @@ The system is designed to display bicycle status information, motor assistance, 
 - Visual interface on Nokia 5110 display.
 - Low-level control using ESP-IDF in C/C++.
 
+## GPIO connections – ESP32-WROOM-32
+
+| Component              | Description                        | ESP32 pin (GPIO) | Notes                                  |
+|------------------------|------------------------------------|------------------|----------------------------------------|
+| 📟 Nokia 5110 display  | LCD SPI                            | GPIO 18 (CLK)    | SPI clock                              |
+|                        |                                    | GPIO 23 (DIN)    | Data in (MOSI)                         |
+|                        |                                    | GPIO 5 (CE)      | Chip enable (may vary)                 |
+|                        |                                    | GPIO 2 (DC)      | Data/Command                           |
+|                        |                                    | GPIO 4 (RST)     | Reset                                  |
+| 🧿 RFID RC522          | RFID reader SPI                    | GPIO 18 (SCK)    | Share with display (revisar)           |
+|                        |                                    | GPIO 23 (MOSI)   | Share with display (revisar)           |
+|                        |                                    | GPIO 19 (MISO)   | Required for SPI communication         |
+|                        |                                    | GPIO 21 (SDA/SS) | Slave select                           |
+| 📡 RCWL-0516 (1)       | Blind spot sensor (left)           | GPIO 32          | Digital output                         |
+| 📡 RCWL-0516 (2)       | Blind spot sensor (right)          | GPIO 33          | Digital output                         |
+| 💡 Rear LED            | Brake light                        | GPIO 26          | Controlled via software (HIGH/LOW)     |
+| 🔁 Turn signal (left)  | Left directional light             | GPIO 27          | PWM or digital                         |
+| 🔁 Turn signal (right) | Right directional light            | GPIO 14          | PWM or digital                         |
+| ⚙️  BLDC driver         | PWM signal input                   | GPIO 25          | Control signal to driver               |
+
 ## Project structure
 
 ```text
@@ -82,12 +102,29 @@ idf.py monitor
 ```
 
 ## Project status
-- [X] Initial project setup.
-- [ ] Custom library for Nokia 5110 LCD.
-- [ ] BLDC motor control.
-- [X] Blind spot sensor integration.
-- [X] RFID reading implementation.
-- [ ] Control motor assistance system.
+
+```
+- [x] ✅ Basic ESP32 connection
+- [ ] 📘 Display text on Nokia 5110 screen
+- [x] ✅ Integrate RCWL-0516 blind spot sensors
+- [x] ✅ Read data from RFID RC522 reader
+- [ ] 💡 Control rear LED lights
+- [ ] 🔁 Control turn signals (two wires)
+- [ ] ⚙️  Connect and test the BLDC driver
+- [ ] 🧠 Develop assistance logic
+- [ ] 🛠️ Integrate all modules into the system
+- [ ] 🧪 Perform integration tests on the bicycle
+- [ ] 📦 Document all physical connections
+- [ ] 📝 Add connection diagram to README
+```
+```
+✅: Task completed
+🛠️: Technical implementation
+📐: Sensors
+💡: Actuators
+📘: Communication
+📦: Hardware
+```
 
 ## Author
 - Developed by Alan Joshua Jiménez Flores
