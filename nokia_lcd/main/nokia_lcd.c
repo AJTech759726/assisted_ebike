@@ -1,71 +1,93 @@
-#include "lcd_nokia5110.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_log.h"
+#include <Adafruit_GFX.h>
+#include <Adafruit_PCD8544.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/queue.h>
+#include <freertos/semphr.h>
 
-#define TAG "LCD_MAIN"
+// LCD Pin Definitions
+#define RST_PIN  4
+#define CE_PIN   5
+#define DC_PIN   2
+#define DIN_PIN 23
+#define CLK_PIN 18
 
-void app_main(void)
-{
-    ESP_LOGI(TAG, "Starting application with Nokia 5110 display");
+// FreeRTOS Objects
+SemaphoreHandle_t dataMutex;
 
-    lcd_nokia5110_t lcd = NULL; 				// Pointer in use
+// LCD Object
+Adafruit_PCD8544 display = Adafruit_PCD8544(CLK_PIN, DIN_PIN, DC_PIN, CE_PIN, RST_PIN);
 
-    // 1. Initial configuration of the LCD
-    lcd_nokia5110_config_t config = {
-        .pin_sclk = GPIO_NUM_18, 				// Pin CLK SPI
-        .pin_din = GPIO_NUM_23, 				// Pin MOSI SPI
-        .pin_dc = GPIO_NUM_4, 					// Pin Data/Command
-        .pin_cs = GPIO_NUM_5, 					// Pin Chip Select
-        .pin_rst = GPIO_NUM_15, 				// Pin Reset
-        .spi_host = SPI2_HOST, 					// SPI port to use
-        .contrast = 0x3F 					// Initial contrast (0-0x7F)
-    };
+// Shared Data Structure
+typedef struct {
+  int counter;
+  float temperature;
+  char status[14];
+} DisplayData;
 
-    // 2. LCD initialization
-    esp_err_t ret = lcd_nokia5110_init(&config, &lcd);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "LCD initialization error: %s", esp_err_to_name(ret));
-        return;
-    }
+DisplayData displayData = {0, 25.0, "Status: OK"};
 
-    // 3. Clear screen
-    lcd_nokia5110_clear(lcd);
+// LCD Task (Updates Display)
+void lcdTask(void *pvParameters) {
+  display.begin();
+  display.setContrast(100);
+  display.clearDisplay();
+  display.display();
 
-    // 4. Display basic information
-    lcd_nokia5110_set_cursor(lcd, 0, 0);
-    lcd_nokia5110_write_string(lcd, "Hola, bicilocos");
+  while(1) {
+    // Take mutex to safely copy data
+    xSemaphoreTake(dataMutex, portMAX_DELAY);
+    DisplayData localData = displayData;
+    xSemaphoreGive(dataMutex);
 
-    lcd_nokia5110_set_cursor(lcd, 0, 1);
-    lcd_nokia5110_write_string(lcd, "E-Bike");
-    
-    lcd_nokia5110_set_cursor(lcd, 0, 2);
-    lcd_nokia5110_write_string(lcd, "Status: OK");
-    
-    lcd_nokia5110_set_cursor(lcd, 0, 3);
-    lcd_nokia5110_write_string(lcd, "Velocity: 0 km/h");
-    
-    lcd_nokia5110_set_cursor(lcd, 0, 4);
-    lcd_nokia5110_write_string(lcd, "Battery: 100%");
+    // Update display
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.printf("Count: %d", localData.counter);
+    display.setCursor(0, 10);
+    display.printf("Temp: %.1fC", localData.temperature);
+    display.setCursor(0, 20);
+    display.println(localData.status);
+    display.display();
 
-    // 5. Update screen
-    lcd_nokia5110_update(lcd);
-
-    // 6. Simple animation example
-    uint8_t contrast = 0x3F;
-    bool increasing = false;
-    
-    while (1) {
-        // Change contrast for demostration
-        if (increasing) {
-            contrast++;
-            if (contrast >= 0x7F) increasing = false;
-        } else {
-            contrast--;
-            if (contrast <= 0x20) increasing = true;
-        }
-        
-        lcd_nokia5110_set_contrast(lcd, contrast);
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
+    vTaskDelay(500 / portTICK_PERIOD_MS); // Refresh every 500ms
+  }
 }
+
+// Sensor Task
+void sensorTask(void *pvParameters) {
+  while(1) {
+    xSemaphoreTake(dataMutex, portMAX_DELAY);
+    displayData.temperature += 0.5;
+    if(displayData.temperature > 30.0) displayData.temperature = 25.0;
+    snprintf(displayData.status, sizeof(displayData.status), "Status: OK");
+    xSemaphoreGive(dataMutex);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+  }
+}
+
+// Counter Task
+void counterTask(void *pvParameters) {
+  while(1) {
+    xSemaphoreTake(dataMutex, portMAX_DELAY);
+    displayData.counter++;
+    xSemaphoreGive(dataMutex);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+ 
+  // Initialize mutex
+  dataMutex = xSemaphoreCreateMutex();
+
+  // Create tasks
+  xTaskCreatePinnedToCore(lcdTask, "LCD Task", 4096, NULL, 2, NULL, 1);
+  xTaskCreatePinnedToCore(sensorTask, "Sensor Task", 2048, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(counterTask, "Counter Task", 2048, NULL, 1, NULL, 0);
+
+  Serial.println("FreeRTOS LCD System Started!");
+}
+
+void loop() {}
