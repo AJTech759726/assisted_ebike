@@ -4,3 +4,6 @@
 [submodule "nokia_lcd/components/Adafruit_GFX"]
 	path = nokia_lcd/components/Adafruit_GFX
 	url = https://github.com/adafruit/Adafruit-GFX-Library.git
+[submodule "nokia_lcd/components/arduino-esp32"]
+	path = nokia_lcd/components/arduino-esp32
+	url = https://github.com/espressif/arduino-esp32.git
