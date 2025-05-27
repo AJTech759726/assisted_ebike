@@ -1,0 +1,3 @@
+[submodule "nokia_lcd/components/Adafruit_PCD8544"]
+	path = nokia_lcd/components/Adafruit_PCD8544
+	url = https://github.com/adafruit/Adafruit-PCD8544-Nokia-5110-LCD-library.git
