@@ -1,23 +1,20 @@
-# Ignorar  carpeta de build
+# ESP-IDF build files
 build/
-
-# Archivos de configuración de ESP-IDF
-sdkconfig
-sdkconfig.old
-
-# Configuración de IDEs
-.vscode/
-.idea/
-*.code-worspace
-.project
-.cproject
-.settings/
-
-# Archivos generados del sistema operativo
-*.DS_Store
-Thumbs.io
-
-# Archivos binarios
 *.bin
 *.elf
 *.map
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+sdkconfig
+sdkconfig.old
+*.log
+
+# VSCode settings (if any)
+.vscode/
+
+# Backup/temporary files
+*~
+*.swp
+*.swo

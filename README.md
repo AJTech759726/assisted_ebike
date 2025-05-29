@@ -1,16 +1,24 @@
 # Project: Assisted e-bike - ESP32
+
 ## Description
+
 This project involves developing a electric bicycle using an ESP32 microcontroller, sensors, and a Nokia 5110 LCD screen.
 The system is designed to display bicycle status information, motor assistance, and safety sensors such as blind spot detection and RFID.
 
+---
+
 ## Technologies and tools
+
 - ESP-IDF (Official Espressif framework for ESP32).
 - C Programming language.
 - Git and GitHub.
 - FreeRTOS (Real-time task management).
 - SPI Master driver (for Nokia 5110 screen control).
 
+---
+
 ## Electronic components
+
 - ESP32-WROOM-32
 - Nokia 5110 LCD screen
 - SNR8503M driver for BLDC motor
@@ -18,11 +26,43 @@ The system is designed to display bicycle status information, motor assistance, 
 - RFID module
 - BLDC motor
 
+---
+
 ## Features
+
 - BLDC motor control with SNR8503M driver.
 - Blind spot detection using RCWL-0516 sensors.
 - Visual interface on Nokia 5110 display.
 - Low-level control using ESP-IDF in C/C++.
+
+---
+
+## Project Documentation  
+
+The detailed documentation is located in the [`docs/`](./docs/) folder:  
+
+| File                      | Description |
+|---------------------------|-------------|
+| [`architecture.md`](./docs/architecture.md)        | General architecture of the assistance system. |
+| [`components.md`](./docs/components.md)            | Electronic components used. |
+| [`gpio_map.md`](./docs/gpio_map.md)                | GPIO pin mapping between modules and the ESP32. |
+| [`power_distribution.md`](./docs/power_distribution.md) | Power distribution from the 36V battery to various modules. |
+| [`software_flow.md`](./docs/software_flow.md)      | Software logic flow (state and events). |
+| [`roadmap.md`](./docs/roadmap.md)                  | Development roadmap for software and hardware. |
+| [`changelog.md`](./docs/changelog.md)              | Version change log. |
+
+---
+
+## Diagrams
+
+Located in the [`hardware/`](./hardware/) directory:
+
+| Diagram                                 | Description                        |
+|-----------------------------------------|------------------------------------|
+| ![Schematic](./hardware/schematic_diagram.png) | Logical schematic of the circuit   |
+| ![Wiring](./hardware/wiring_diagram.png)       | Wiring diagram for physical setup  |
+
+---
 
 ## GPIO connections – ESP32-WROOM-32
 
@@ -44,62 +84,83 @@ The system is designed to display bicycle status information, motor assistance, 
 | 🔁 Turn signal (right) | Right directional light            | GPIO 14          | PWM or digital                         |
 | ⚙️  BLDC driver         | PWM signal input                   | GPIO 25          | Control signal to driver               |
 
+---
+
 ## Project structure
 
 ```text
-workspace/
-├── main/                          	# Main project code
-│   ├── main.c                     	# Application entry point (app_main)
-│   ├── CMakeLists.txt             	# CMake configuration for this subfolder
-│   └── ...                        	# Other source files
-├── managed_components/                 # Custom libraries
-│   └── lcd_nokia5110/             	# Library for Nokia 5110 LCD screen
-│       ├── src/                   	# Library source code
-│       │   ├── lcd_nokia5110.c
-│       │   └── font_5x7.c
-│       ├── private_include/       	# Internal headers (private use)
-│       │   └── lcd_nokia5110_priv.h
-│       ├── include/               	# Public headers (library API)
-│       │   ├── lcd_nokia5110.h
-│       │   └── font_5x7.h
+assisted_ebike_project/
+├── docs/                       # Project documentation in Markdown
+│   ├── architecture.md
+│   ├── components.md
+│   └── ...
+├── firmware/
+│   └── v1.0/
+│       ├── main/               # Main ESP32 application source code
+│       │   ├── main.c
+│       │   └── CMakeLists.txt
+│       ├── include/           # Configuration and public headers
+│       │   └── config.h
 │       └── CMakeLists.txt
-├── sdkconfig                      	# Project configuration
-├── CMakeLists.txt
+├── hardware/                  # Hardware diagrams and schematics
+│   ├── schematic_diagram.png
+│   └── wiring_diagram.png
+├── test/                      # Unit or integration testing files
 ├── .gitignore
+├── LICENSE
 └── README.md
 ```
 
+---
+
 ## How to compile and upload
-1. Set up the ESP-IDF environment.
-2. Clone this repository:
+
+1. **Set up the ESP-IDF environment** (see [ESP-IDF Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/latest/)).
+
+2. **Clone the repository**:
 
 ```bash
 git clone https://github.com/AJTech759726/assisted_ebike.git
 ```
 
-3. Enter the project folder:
+3. **Navigate to the firmware directory**:
 
 ```bash
-cd workspace
+cd assisted_ebike/firmware/v...
 ```
 
-4. Compile the project:
+4. *(Optional)* **Set ESP32 as the target**:
+
+```bash
+idf.py set-target esp32
+```
+
+5. **Build the firmware**:
 
 ```bash
 idf.py build
 ```
 
-5. Flash the firmware to the ESP32:
+6. **Flash to ESP32** (replace ```<your_port>``` with your actual port, e.g., ```/dev/ttyUSB0``` or ```COM3```):
 
 ```bash
-idf.py -p PORT flash
+idf.py -p <your_port> flash
 ```
 
-6. Monitor the output:
+7. **Monitor output**:
 
 ```bash
 idf.py monitor
 ```
+
+You can combine flashing and monitoring in one command:
+
+```bash
+idf.py -p <your_port> flash monitor
+
+Press ```Ctrl+]``` to exit monitor mode.
+
+---
 
 ## Project status
 
@@ -117,6 +178,11 @@ idf.py monitor
 - [ ] 📦 Document all physical connections
 - [ ] 📝 Add connection diagram to README
 ```
+
+---
+
+**Legend**:
+
 ```
 ✅: Task completed
 🛠️: Technical implementation
@@ -126,9 +192,14 @@ idf.py monitor
 📦: Hardware
 ```
 
+---
+
 ## Author
-- Developed by Alan Joshua Jiménez Flores
+
+- Developed by **Alan Joshua Jiménez Flores**
+
 - [GitHub Profile](https://github.com/AJTech759726/)
+
 ---
 
 Developed with [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/latest/).
