@@ -157,6 +157,7 @@ You can combine flashing and monitoring in one command:
 
 ```bash
 idf.py -p <your_port> flash monitor
+```
 
 Press ```Ctrl+]``` to exit monitor mode.
 
@@ -165,13 +166,13 @@ Press ```Ctrl+]``` to exit monitor mode.
 ## Project status
 
 ```
-- [x] ✅ Basic ESP32 connection
-- [ ] 📘 Display text on Nokia 5110 screen
-- [x] ✅ Integrate RCWL-0516 blind spot sensors
-- [x] ✅ Read data from RFID RC522 reader
+- [x] 📦 Basic ESP32 connection
+- [x] 📘 Display text on Nokia 5110 screen
+- [x] 📐 Integrate RCWL-0516 blind spot sensors
+- [x] 📐 Read data from RFID RC522 reader
 - [ ] 💡 Control rear LED lights
 - [ ] 🔁 Control turn signals (two wires)
-- [ ] ⚙️  Connect and test the BLDC driver
+- [x] ⚙️  Connect and test the BLDC driver
 - [ ] 🧠 Develop assistance logic
 - [ ] 🛠️ Integrate all modules into the system
 - [ ] 🧪 Perform integration tests on the bicycle
@@ -184,7 +185,6 @@ Press ```Ctrl+]``` to exit monitor mode.
 **Legend**:
 
 ```
-✅: Task completed
 🛠️: Technical implementation
 📐: Sensors
 💡: Actuators

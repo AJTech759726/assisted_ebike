@@ -9,7 +9,7 @@ static const char *TAG = "rc522-basic-example";
 #define RC522_SPI_BUS_GPIO_MOSI    (23)
 #define RC522_SPI_BUS_GPIO_SCLK    (18)
 #define RC522_SPI_SCANNER_GPIO_SDA (5)
-#define RC522_SCANNER_GPIO_RST     (22) // soft-reset
+#define RC522_SCANNER_GPIO_RST     (4) // soft-reset
 
 static rc522_spi_config_t driver_config = {
     .host_id = SPI3_HOST,
