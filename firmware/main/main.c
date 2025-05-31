@@ -9,7 +9,7 @@
 #include "rc522_picc.h"
 
 // Hardware configuration
-#define RCWL_GPIO		GPIO_NUM_33				// Movement sensor RCWL-0516
+#define RCWL_GPIO		GPIO_NUM_34				// Movement sensor RCWL-0516
 
 // RFID RC522 TAG Reader configuration
 #define RC522_SPI_HOST		SPI3_HOST				// RFID RC522 TAG Reader
@@ -17,7 +17,7 @@
 #define RC522_MOSI_GPIO		GPIO_NUM_23
 #define RC522_SCLK_GPIO		GPIO_NUM_18
 #define RC522_SDA_GPIO		GPIO_NUM_5
-#define RC522_RST_GPIO		GPIO_NUM_4				// soft-reset
+#define RC522_RST_GPIO		GPIO_NUM_22				// soft-reset
 
 #define BLIND_SPOT_LIGHT_GPIO	GPIO_NUM_25				// Blind spot lights
 #define SYSTEM_ACTIVE_GPIO	GPIO_NUM_2				// System active indicator LED
