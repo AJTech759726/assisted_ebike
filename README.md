@@ -23,7 +23,7 @@ The system is designed to display bicycle status information, motor assistance, 
 - Nokia 5110 LCD screen
 - SNR8503M driver for BLDC motor
 - RCWL-0516 sensors (blind spot detection)
-- RFID module
+- RFID-RC522 module
 - BLDC motor
 
 ---
@@ -33,7 +33,8 @@ The system is designed to display bicycle status information, motor assistance, 
 - BLDC motor control with SNR8503M driver.
 - Blind spot detection using RCWL-0516 sensors.
 - Visual interface on Nokia 5110 display.
-- Low-level control using ESP-IDF in C/C++.
+- Low-level control using ESP-IDF in C.
+- Access detection to the system with RFID-RC522 lector
 
 ---
 
@@ -68,21 +69,28 @@ Located in the [`hardware/`](./hardware/) directory:
 
 | Component              | Description                        | ESP32 pin (GPIO) | Notes                                  |
 |------------------------|------------------------------------|------------------|----------------------------------------|
-| 📟 Nokia 5110 display  | LCD SPI                            | GPIO 18 (CLK)    | SPI clock                              |
-|                        |                                    | GPIO 23 (DIN)    | Data in (MOSI)                         |
-|                        |                                    | GPIO 5 (CE)      | Chip enable (may vary)                 |
-|                        |                                    | GPIO 2 (DC)      | Data/Command                           |
-|                        |                                    | GPIO 4 (RST)     | Reset                                  |
-| 🧿 RFID RC522          | RFID reader SPI                    | GPIO 18 (SCK)    | Share with display (revisar)           |
-|                        |                                    | GPIO 23 (MOSI)   | Share with display (revisar)           |
+| 📟 Nokia 5110 display  | LCD SPI display                    | GPIO 18 (CLK)    | SPI clock, share with RFID             |
+|                        |                                    | GPIO 23 (DIN)    | Data in (MOSI), shared with RFID       |
+|                        |                                    | GPIO 2 (CE)      | Chip enable (unique per device)        |
+|                        |                                    | GPIO 17 (DC)     | Data/Command select                    |
+|                        |                                    | GPIO 21 (RST)    | Reset pin                              |
+| 🧿 RFID RC522          | RFID reader SPI                    | GPIO 18 (SCK)    | Share SPI clock (OK)                   |
+|                        |                                    | GPIO 23 (MOSI)   | Share SPI MOSI (OK)                    |
 |                        |                                    | GPIO 19 (MISO)   | Required for SPI communication         |
-|                        |                                    | GPIO 21 (SDA/SS) | Slave select                           |
-| 📡 RCWL-0516 (1)       | Blind spot sensor (left)           | GPIO 32          | Digital output                         |
-| 📡 RCWL-0516 (2)       | Blind spot sensor (right)          | GPIO 33          | Digital output                         |
-| 💡 Rear LED            | Brake light                        | GPIO 26          | Controlled via software (HIGH/LOW)     |
-| 🔁 Turn signal (left)  | Left directional light             | GPIO 27          | PWM or digital                         |
-| 🔁 Turn signal (right) | Right directional light            | GPIO 14          | PWM or digital                         |
-| ⚙️  BLDC driver         | PWM signal input                   | GPIO 25          | Control signal to driver               |
+|                        |                                    | GPIO 5 (SDA/SS)  | SPI Slave select (unique per device)   |
+|			 |				      | GPIO 4 (RST)	 | Module reset				  |
+| 📡 RCWL-0516 (1)       | Blind spot sensor (right)          | GPIO 33          | Digital output                         |
+| 📡 RCWL-0516 (2)       | Blind spot sensor (left)           | GPIO 32          | Digital output                         |
+| 💡 Blind spot LED      | Warning light for blind spots      | GPIO 35          | Controlled via software (HIGH/LOW)     |
+| ⚙️  BLDC driver         | PWM signal input (VSP)             | GPIO 25          | Control signal to driver               |
+| 🧲 Trigger 		 | Accelerator trigger (analog)	      | GPIO 34		 | ADC input to read trigger position     |
+| 🎛️ Potentiometer	 | Assistance level control (analog)  | GPIO 26		 | ADC input to set motor assist level    |
+| 🧭 Hall sensors (motor)| Measure wheel/motor rotation speed | GPIO 3		 | Hall sensor 1			  |
+|                        |                                    | GPIO 1           | Hall sensor 2                          |
+|                        |                                    | GPIO 22          | Hall sensor 3                          |
+| 🦶 Hall sensor (pedal) | Detects pedal movement (engine ON) | GPIO 27		 | Interrupt-based activation             |
+| 🔁 Turn signal (right) | Right directional indicator        | GPIO 14          | HIGH to activate right sensor	  |
+| 🔁 Turn signal (left)  | Left directional indicator         | GPIO 13          | HIGH to activate left sensor		  |
 
 ---
 
@@ -95,17 +103,16 @@ assisted_ebike_project/
 │   ├── components.md
 │   └── ...
 ├── firmware/
-│   └── v1.0/
-│       ├── main/               # Main ESP32 application source code
-│       │   ├── main.c
-│       │   └── CMakeLists.txt
-│       ├── include/           # Configuration and public headers
-│       │   └── config.h
-│       └── CMakeLists.txt
-├── hardware/                  # Hardware diagrams and schematics
+│   ├── main/             	# Main ESP32 application source code
+│   │   ├── main.c
+│   │   └── CMakeLists.txt
+│   ├── include/           	# Configuration and public headers
+│   │   └── config.h
+│   └── CMakeLists.txt
+├── hardware/                  	# Hardware diagrams and schematics
 │   ├── schematic_diagram.png
 │   └── wiring_diagram.png
-├── test/                      # Unit or integration testing files
+├── test/                      	# Unit or integration testing files
 ├── .gitignore
 ├── LICENSE
 └── README.md
@@ -126,7 +133,7 @@ git clone https://github.com/AJTech759726/assisted_ebike.git
 3. **Navigate to the firmware directory**:
 
 ```bash
-cd assisted_ebike/firmware/v...
+cd assisted_ebike/firmware/
 ```
 
 4. *(Optional)* **Set ESP32 as the target**:
@@ -170,11 +177,11 @@ Press ```Ctrl+]``` to exit monitor mode.
 - [x] 📘 Display text on Nokia 5110 screen
 - [x] 📐 Integrate RCWL-0516 blind spot sensors
 - [x] 📐 Read data from RFID RC522 reader
-- [ ] 💡 Control rear LED lights
-- [ ] 🔁 Control turn signals (two wires)
+- [ ] 💡 Control rear blind spot sensors with the turn signals
+- [x] 🔁 Control turn signals (two wires)
 - [x] ⚙️  Connect and test the BLDC driver
-- [ ] 🧠 Develop assistance logic
-- [ ] 🛠️ Integrate all modules into the system
+- [x] 🧠 Develop assistance logic
+- [x] 🛠️ Integrate all modules into the system
 - [ ] 🧪 Perform integration tests on the bicycle
 - [ ] 📦 Document all physical connections
 - [ ] 📝 Add connection diagram to README
