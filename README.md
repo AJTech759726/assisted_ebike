@@ -184,7 +184,7 @@ Press ```Ctrl+]``` to exit monitor mode.
 - [x] 🛠️ Integrate all modules into the system
 - [ ] 🧪 Perform integration tests on the bicycle
 - [x] 📦 Document all physical connections
-- [ ] 📝 Add connection diagram to README
+- [x] 📝 Add connection diagram to README
 
 ---
 
