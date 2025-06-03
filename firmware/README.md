@@ -52,4 +52,3 @@ Implement a fully functional smart bicycle assistance system using the ESP32, ca
 
 > This version focuses on robustness, modularity, and clarity in control logic.  
 > Ideal for testing full system behavior under real bicycle use conditions.
-
