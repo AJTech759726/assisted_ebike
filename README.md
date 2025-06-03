@@ -173,7 +173,6 @@ Press ```Ctrl+]``` to exit monitor mode.
 
 ## Project status
 
-```
 - [x] 📦 Basic ESP32 connection
 - [x] 📘 Display text on Nokia 5110 screen
 - [x] 📐 Integrate RCWL-0516 blind spot sensors
@@ -186,7 +185,6 @@ Press ```Ctrl+]``` to exit monitor mode.
 - [ ] 🧪 Perform integration tests on the bicycle
 - [x] 📦 Document all physical connections
 - [ ] 📝 Add connection diagram to README
-```
 
 ---
 
