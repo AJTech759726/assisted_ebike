@@ -1,7 +1,7 @@
 # Software Flow
 
 ## Initialization
-1. Configure GPIOs and SPI/I2C peripherals.
+1. Configure GPIOs and SPI peripherals.
 2. Initialize custom components (LCD, RFID, Sensors).
 
 ## Main Loop

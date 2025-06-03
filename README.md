@@ -60,8 +60,9 @@ Located in the [`hardware/`](./hardware/) directory:
 
 | Diagram                                 | Description                        |
 |-----------------------------------------|------------------------------------|
-| ![Schematic](./hardware/schematic_diagram.png) | Logical schematic of the circuit   |
-| ![Wiring](./hardware/wiring_diagram.png)       | Wiring diagram for physical setup  |
+| ![Schematic](./hardware/schematic_diagram.png) | Logical schematic of the circuit   	  |
+| ![Wiring](./hardware/wiring_diagram.png)       | Wiring diagram for physical setup  	  |
+| ![System](./hardware/system_overview.png)      | System overview of the logic behavior  |
 
 ---
 
@@ -177,13 +178,13 @@ Press ```Ctrl+]``` to exit monitor mode.
 - [x] 📘 Display text on Nokia 5110 screen
 - [x] 📐 Integrate RCWL-0516 blind spot sensors
 - [x] 📐 Read data from RFID RC522 reader
-- [ ] 💡 Control rear blind spot sensors with the turn signals
+- [x] 💡 Control rear blind spot sensors with the turn signals
 - [x] 🔁 Control turn signals (two wires)
 - [x] ⚙️  Connect and test the BLDC driver
 - [x] 🧠 Develop assistance logic
 - [x] 🛠️ Integrate all modules into the system
 - [ ] 🧪 Perform integration tests on the bicycle
-- [ ] 📦 Document all physical connections
+- [x] 📦 Document all physical connections
 - [ ] 📝 Add connection diagram to README
 ```
 

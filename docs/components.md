@@ -16,24 +16,28 @@
 
 - **RCWL-0516 (x2)**
   - Motion detection module
-  - Pins: OUT1 (D33), OUT2 (D25)
+  - Pins: OUT1 (D33), OUT2 (D32)
 
 - **Assistance Potentiometer**
   - Reads analog voltage for pedal assist level
-  - Pin: D27
+  - Pin: D26
+
+- **Accelerator trigger**
+  - Reads analog voltage for manual motor engine
+  - Pin: D24
 
 - **Cadence Transistor**
   - Detects pedal rotations
-  - Pin: D26
+  - Pin: D27
 
-- **Voltage Dividers (x2)**
-  - Used for battery monitoring or sensor logic level detection
+- **Turn signals activation**
+  - Used for the logical function of the blind spot sensors
   - Pins: D13, D14
 
-- **Blindspot Lights**
+- **Blindspot Light**
   - Controlled via GPIO
-  - Pins: D35, D34
+  - Pin: D35
 
 - **Brushless Motor Driver**
   - Controlled via ESP32 PWM/GPIO
-  - Pins available: D22, D1, D3, D16, D15, D32
+  - Pin: D25

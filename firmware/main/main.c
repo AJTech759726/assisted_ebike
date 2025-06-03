@@ -14,10 +14,14 @@
 #include "rc522_picc.h"
 
 // Hardware configuration
-#define RCWL_LEFT_GPIO       GPIO_NUM_33
-#define RCWL_RIGHT_GPIO      GPIO_NUM_32
-#define BLIND_SPOT_LIGHT_GPIO GPIO_NUM_25
+#define RCWL_RIGHT_GPIO      GPIO_NUM_33
+#define RCWL_LEFT_GPIO       GPIO_NUM_32
+#define BLIND_SPOT_LED_GPIO  GPIO_NUM_35
 #define SYSTEM_ACTIVE_LED    GPIO_NUM_2
+
+// Turn signals
+#define TURN_SIGNAL_RIGHT    GPIO_NUM_14
+#define TURN_SIGNAL_LEFT     GPIO_NUM_13
 
 // Motor control
 #define DAC_OUTPUT_PIN       GPIO_NUM_25  // Connected to VSP of driver
@@ -50,6 +54,7 @@
 #define HALL_SENSORS_PER_REV  6
 #define MAX_SPEED_RPM         300   // Maximum expected motor RPM
 #define PEDAL_TIMEOUT_MS      2000  // 2 seconds without pedaling cuts assist
+#define TURN_SIGNAL_TIMEOUT   5000  // 5 seconds turn signal auto-off
 
 // PID parameters
 #define PID_UPDATE_MS         50
@@ -70,6 +75,11 @@ static volatile bool pedaling = false;
 static volatile int64_t last_pedal_time = 0;
 static float pid_integral = 0;
 static float last_error = 0;
+
+// Turn signal variables
+static bool right_turn_active = false;
+static bool left_turn_active = false;
+static int64_t turn_signal_start_time = 0;
 
 // RFID variables
 static rc522_handle_t scanner;
@@ -202,6 +212,14 @@ void update_display() {
     lcd_print("Assist: ");
     lcd_print_number(assistance_level);
     lcd_print("%");
+    
+    // Turn signal indicators
+    lcd_set_position(0, 3);
+    if (right_turn_active) {
+        lcd_print("->");
+    } else if (left_turn_active) {
+        lcd_print("<-");
+    }
 }
 
 // Motor control functions
@@ -228,6 +246,13 @@ void motor_control_init() {
     adc1_config_width(ADC_WIDTH_BIT_12);
     adc1_config_channel_atten(ADC1_CHANNEL_7, ADC_ATTEN_DB_11);  // GPIO26 (potentiometer)
     adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11);  // GPIO34 (accelerator)
+    
+    // Configure turn signal inputs
+    io_conf.pin_bit_mask = (1ULL << TURN_SIGNAL_RIGHT) | (1ULL << TURN_SIGNAL_LEFT);
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    gpio_config(&io_conf);
 }
 
 void set_motor_output(float output) {
@@ -253,11 +278,59 @@ float calculate_motor_speed() {
     return motor_speed;
 }
 
+void check_turn_signals() {
+    // Check if turn signals are active
+    bool right_signal = gpio_get_level(TURN_SIGNAL_RIGHT);
+    bool left_signal = gpio_get_level(TURN_SIGNAL_LEFT);
+    
+    // Update turn signal states
+    if (right_signal && !right_turn_active) {
+        right_turn_active = true;
+        left_turn_active = false;
+        turn_signal_start_time = esp_timer_get_time();
+    } 
+    else if (left_signal && !left_turn_active) {
+        left_turn_active = true;
+        right_turn_active = false;
+        turn_signal_start_time = esp_timer_get_time();
+    }
+    
+    // Auto-turn-off after timeout
+    int64_t now = esp_timer_get_time();
+    if ((right_turn_active || left_turn_active) && 
+        (now - turn_signal_start_time) > (TURN_SIGNAL_TIMEOUT * 1000)) {
+        right_turn_active = false;
+        left_turn_active = false;
+    }
+}
+
+void check_blind_spots() {
+    bool blind_spot_detected = false;
+    
+    // Right blind spot check (only if right turn signal is active)
+    if (right_turn_active && gpio_get_level(RCWL_RIGHT_GPIO)) {
+        blind_spot_detected = true;
+        ESP_LOGI("BLIND_SPOT", "Right blind spot detected!");
+    }
+    // Left blind spot check (only if left turn signal is active)
+    else if (left_turn_active && gpio_get_level(RCWL_LEFT_GPIO)) {
+        blind_spot_detected = true;
+        ESP_LOGI("BLIND_SPOT", "Left blind spot detected!");
+    }
+    
+    // Control blind spot warning LED
+    gpio_set_level(BLIND_SPOT_LED_GPIO, blind_spot_detected);
+}
+
 void motor_control_task(void *pvParameters) {
     float target_speed = 0;
     float current_speed_rpm = 0;
     
     while (1) {
+        // Check turn signals and blind spots
+        check_turn_signals();
+        check_blind_spots();
+        
         // Read sensors
         current_speed_rpm = calculate_motor_speed();
         int pot_value = adc1_get_raw(ADC1_CHANNEL_7);
@@ -318,7 +391,7 @@ static void on_rfid_detection(void *arg, esp_event_base_t base,
 void setup_gpio() {
     // INPUT Configuration
     gpio_config_t input_conf = {
-        .pin_bit_mask = (1ULL << RCWL_LEFT_GPIO) | (1ULL << RCWL_RIGHT_GPIO),
+        .pin_bit_mask = (1ULL << RCWL_RIGHT_GPIO) | (1ULL << RCWL_LEFT_GPIO),
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .intr_type = GPIO_INTR_DISABLE
@@ -327,7 +400,7 @@ void setup_gpio() {
 
     // OUTPUT Configuration
     gpio_config_t output_conf = {
-        .pin_bit_mask = (1ULL << BLIND_SPOT_LIGHT_GPIO) | (1ULL << SYSTEM_ACTIVE_LED),
+        .pin_bit_mask = (1ULL << BLIND_SPOT_LED_GPIO) | (1ULL << SYSTEM_ACTIVE_LED),
         .mode = GPIO_MODE_OUTPUT
     };
     gpio_config(&output_conf);
@@ -339,7 +412,7 @@ void shutdown_system() {
     waiting_tag = true;
     set_motor_output(0);
     gpio_set_level(SYSTEM_ACTIVE_LED, 0);
-    gpio_set_level(BLIND_SPOT_LIGHT_GPIO, 0);
+    gpio_set_level(BLIND_SPOT_LED_GPIO, 0);
 }
 
 void app_main(void) {
@@ -386,11 +459,6 @@ void app_main(void) {
 
     while(1) {
         if (system_activated) {
-            // Blind spot detection
-            bool left_detected = gpio_get_level(RCWL_LEFT_GPIO);
-            bool right_detected = gpio_get_level(RCWL_RIGHT_GPIO);
-            gpio_set_level(BLIND_SPOT_LIGHT_GPIO, left_detected || right_detected);
-
             // Update display
             update_display();
         }
