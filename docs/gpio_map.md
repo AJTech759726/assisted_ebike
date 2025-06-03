@@ -12,10 +12,9 @@
 | RFID - SCK                  | D18        | Shared SPI                |
 | RFID - SDA (SS)             | D5         | RFID Chip Select          |
 | RFID - RST                  | D4         | RFID Reset                |
-| Assistance Potentiometer    | D27        | Analog input              |
-| Pedal Transistor            | D26        | Digital input             |
+| Assistance Potentiometer    | D26        | Analog input              |
+| Pedal Transistor            | D27        | Digital input             |
 | RCWL 1                      | D33        | Digital input             |
-| RCWL 2                      | D25        | Digital input             |
-| Blind Spot Light 1          | D35        | Digital output (3.3V)     |
-| Blind Spot Light 2          | D34        | Digital output (3.3V)     |
-| BLDC Motor (free use)       | D22, D1... | PWM and free control      |
+| RCWL 2                      | D32        | Digital input             |
+| Blind Spot Light            | D35        | Digital output (3.3V)     |
+| BLDC Motor                  | D25        | PWM and free control      |

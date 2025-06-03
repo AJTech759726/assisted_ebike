@@ -7,8 +7,8 @@
 
 ## Phase 2 - Security and Identification 🟡  
 - [x] Integration of RCWL-0516  
-- [ ] Functional RFID reader  
-- [ ] Control of blind spot lights  
+- [x] Functional RFID reader  
+- [x] Control of blind spot lights  
 
 ## Phase 3 - Smart Assistance 🔜  
 - [ ] Activation of BLDC motor with specific conditions  
