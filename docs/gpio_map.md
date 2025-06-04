@@ -14,7 +14,13 @@
 | RFID - RST                  | D4         | RFID Reset                |
 | Assistance Potentiometer    | D26        | Analog input              |
 | Pedal Transistor            | D27        | Digital input             |
+| Hall sensor 1		      | D3	   | Digital input	       |
+| Hall sensor 2		      | D1	   | Digital input	       |
+| Hall sensor 3		      | D22	   | Digital input	       |
 | RCWL 1                      | D33        | Digital input             |
 | RCWL 2                      | D32        | Digital input             |
 | Blind Spot Light            | D35        | Digital output (3.3V)     |
 | BLDC Motor                  | D25        | PWM and free control      |
+| Accelerator trigger         | D34        | Analog input              |
+| Turn signal (right)         | D14        | Boolean input             |
+| Turn signal (left)          | D13        | Boolean input             |
