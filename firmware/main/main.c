@@ -13,50 +13,14 @@
 #include "driver/rc522_spi.h"
 #include "rc522_picc.h"
 
-// Hardware configuration
-#define RCWL_RIGHT_GPIO      GPIO_NUM_33
-#define RCWL_LEFT_GPIO       GPIO_NUM_32
-#define BLIND_SPOT_LED_GPIO  GPIO_NUM_35
+//-------------------------------- System Configuration --------------------------------
 #define SYSTEM_ACTIVE_LED    GPIO_NUM_2
-
-// Turn signals
-#define TURN_SIGNAL_RIGHT    GPIO_NUM_14
-#define TURN_SIGNAL_LEFT     GPIO_NUM_13
-
-// Motor control
-#define DAC_OUTPUT_PIN       GPIO_NUM_25  // Connected to VSP of driver
-#define PEDAL_HALL_PIN       GPIO_NUM_27
-#define POTENTIOMETER_PIN    GPIO_NUM_26
-#define ACCELERATOR_PIN      GPIO_NUM_34
-#define HALL1_PIN            GPIO_NUM_3
-#define HALL2_PIN            GPIO_NUM_1
-#define HALL3_PIN            GPIO_NUM_22
-
-// Display configuration
-#define DISPLAY_RST_PIN      GPIO_NUM_21
-#define DISPLAY_CE_PIN       GPIO_NUM_2
-#define DISPLAY_DC_PIN       GPIO_NUM_17
-#define DISPLAY_DIN_PIN      GPIO_NUM_23
-#define DISPLAY_CLK_PIN      GPIO_NUM_18
-#define DISPLAY_SPI_HOST     SPI2_HOST
-
-// RFID configuration
-#define RC522_SPI_HOST       SPI3_HOST
-#define RC522_MISO_GPIO      GPIO_NUM_19
-#define RC522_MOSI_GPIO      GPIO_NUM_23
-#define RC522_SCLK_GPIO      GPIO_NUM_18
-#define RC522_SDA_GPIO       GPIO_NUM_5
-#define RC522_RST_GPIO       GPIO_NUM_4
-
-// System parameters
 #define BATTERY_DIVIDER_RATIO 7.2f
 #define WHEEL_CIRCUMFERENCE   2.1f  // meters
 #define HALL_SENSORS_PER_REV  6
 #define MAX_SPEED_RPM         300   // Maximum expected motor RPM
 #define PEDAL_TIMEOUT_MS      2000  // 2 seconds without pedaling cuts assist
 #define TURN_SIGNAL_TIMEOUT   5000  // 5 seconds turn signal auto-off
-
-// PID parameters
 #define PID_UPDATE_MS         50
 #define KP                    1.0
 #define KI                    0.1
@@ -67,27 +31,13 @@ static float current_speed = 0.0f;
 static uint8_t assistance_level = 0;
 static float battery_voltage = 0.0f;
 
-// Motor control variables
-static volatile int64_t last_hall_time = 0;
-static volatile int64_t hall_period = 0;
-static volatile bool hall_updated = false;
-static volatile bool pedaling = false;
-static volatile int64_t last_pedal_time = 0;
-static float pid_integral = 0;
-static float last_error = 0;
-
-// Turn signal variables
-static bool right_turn_active = false;
-static bool left_turn_active = false;
-static int64_t turn_signal_start_time = 0;
-
-// RFID variables
-static rc522_handle_t scanner;
-static rc522_driver_handle_t driver;
-static bool waiting_tag = true;
-
-// Display variables
-static spi_device_handle_t display_spi;
+//-------------------------------- Display Module --------------------------------
+#define DISPLAY_RST_PIN      GPIO_NUM_21
+#define DISPLAY_CE_PIN       GPIO_NUM_2
+#define DISPLAY_DC_PIN       GPIO_NUM_17
+#define DISPLAY_DIN_PIN      GPIO_NUM_23
+#define DISPLAY_CLK_PIN      GPIO_NUM_18
+#define DISPLAY_SPI_HOST     SPI2_HOST
 
 // LCD Commands
 #define LCD_CMD     0
@@ -96,23 +46,8 @@ static spi_device_handle_t display_spi;
 #define LCD_SETX    0x80
 #define LCD_DISPLAY_ON 0x0C
 
-// Hall sensor ISR
-static void IRAM_ATTR hall_isr_handler(void* arg) {
-    int64_t now = esp_timer_get_time();
-    if (last_hall_time != 0) {
-        hall_period = now - last_hall_time;
-        hall_updated = true;
-    }
-    last_hall_time = now;
-}
+static spi_device_handle_t display_spi;
 
-// Pedal sensor ISR
-static void IRAM_ATTR pedal_isr_handler(void* arg) {
-    pedaling = true;
-    last_pedal_time = esp_timer_get_time();
-}
-
-// Display functions
 void lcd_send(uint8_t data, uint8_t mode) {
     spi_transaction_t t = {
         .length = 8,
@@ -222,7 +157,146 @@ void update_display() {
     }
 }
 
-// Motor control functions
+//-------------------------------- RFID Module --------------------------------
+#define RC522_SPI_HOST       SPI3_HOST
+#define RC522_MISO_GPIO      GPIO_NUM_19
+#define RC522_MOSI_GPIO      GPIO_NUM_23
+#define RC522_SCLK_GPIO      GPIO_NUM_18
+#define RC522_SDA_GPIO       GPIO_NUM_5
+#define RC522_RST_GPIO       GPIO_NUM_4
+
+static rc522_handle_t scanner;
+static rc522_driver_handle_t driver;
+static bool waiting_tag = true;
+
+static void on_rfid_detection(void *arg, esp_event_base_t base,
+                int32_t event_id, void *data) {
+    rc522_picc_state_changed_event_t *event = (rc522_picc_state_changed_event_t *)data;
+    rc522_picc_t *picc = event->picc;
+
+    if (waiting_tag && picc->state == RC522_PICC_STATE_ACTIVE) {
+        ESP_LOGI("RFID", "Authorized TAG detected - Activating system");
+        system_activated = true;
+        waiting_tag = false;
+        gpio_set_level(SYSTEM_ACTIVE_LED, 1);
+    }
+}
+
+void rfid_init() {
+    rc522_spi_config_t driver_config = {
+        .host_id = RC522_SPI_HOST,
+        .bus_config = &(spi_bus_config_t) {
+            .miso_io_num = RC522_MISO_GPIO,
+            .mosi_io_num = RC522_MOSI_GPIO,
+            .sclk_io_num = RC522_SCLK_GPIO,
+        },
+        .dev_config = {
+            .spics_io_num = RC522_SDA_GPIO,
+        },
+        .rst_io_num = RC522_RST_GPIO,
+    };
+    rc522_spi_create(&driver_config, &driver);
+    rc522_driver_install(driver);
+
+    rc522_config_t scanner_config = {
+        .driver = driver,
+    };
+    rc522_create(&scanner_config, &scanner);
+    rc522_register_events(scanner, RC522_EVENT_PICC_STATE_CHANGED, on_rfid_detection, NULL);
+    rc522_start(scanner);
+}
+
+//-------------------------------- Blind Spot Module --------------------------------
+#define RCWL_RIGHT_GPIO      GPIO_NUM_33
+#define RCWL_LEFT_GPIO       GPIO_NUM_32
+#define BLIND_SPOT_LED_GPIO  GPIO_NUM_35
+
+static bool right_turn_active = false;
+static bool left_turn_active = false;
+static int64_t turn_signal_start_time = 0;
+
+void check_blind_spots() {
+    bool blind_spot_detected = false;
+    
+    // Right blind spot check (only if right turn signal is active)
+    if (right_turn_active && gpio_get_level(RCWL_RIGHT_GPIO)) {
+        blind_spot_detected = true;
+        ESP_LOGI("BLIND_SPOT", "Right blind spot detected!");
+    }
+    // Left blind spot check (only if left turn signal is active)
+    else if (left_turn_active && gpio_get_level(RCWL_LEFT_GPIO)) {
+        blind_spot_detected = true;
+        ESP_LOGI("BLIND_SPOT", "Left blind spot detected!");
+    }
+    
+    // Control blind spot warning LED
+    gpio_set_level(BLIND_SPOT_LED_GPIO, blind_spot_detected);
+}
+
+//-------------------------------- Turn Signal Module --------------------------------
+#define TURN_SIGNAL_RIGHT    GPIO_NUM_14
+#define TURN_SIGNAL_LEFT     GPIO_NUM_13
+
+void check_turn_signals() {
+    // Check if turn signals are active
+    bool right_signal = gpio_get_level(TURN_SIGNAL_RIGHT);
+    bool left_signal = gpio_get_level(TURN_SIGNAL_LEFT);
+    
+    // Update turn signal states
+    if (right_signal && !right_turn_active) {
+        right_turn_active = true;
+        left_turn_active = false;
+        turn_signal_start_time = esp_timer_get_time();
+    } 
+    else if (left_signal && !left_turn_active) {
+        left_turn_active = true;
+        right_turn_active = false;
+        turn_signal_start_time = esp_timer_get_time();
+    }
+    
+    // Auto-turn-off after timeout
+    int64_t now = esp_timer_get_time();
+    if ((right_turn_active || left_turn_active) && 
+        (now - turn_signal_start_time) > (TURN_SIGNAL_TIMEOUT * 1000)) {
+        right_turn_active = false;
+        left_turn_active = false;
+    }
+}
+
+//-------------------------------- Motor Control Module --------------------------------
+#define DAC_OUTPUT_PIN       GPIO_NUM_25  // Connected to VSP of driver
+#define PEDAL_HALL_PIN       GPIO_NUM_27
+#define POTENTIOMETER_PIN    GPIO_NUM_26
+#define ACCELERATOR_PIN      GPIO_NUM_34
+#define HALL1_PIN            GPIO_NUM_3
+#define HALL2_PIN            GPIO_NUM_1
+#define HALL3_PIN            GPIO_NUM_22
+
+// Motor control variables
+static volatile int64_t last_hall_time = 0;
+static volatile int64_t hall_period = 0;
+static volatile bool hall_updated = false;
+static volatile bool pedaling = false;
+static volatile int64_t last_pedal_time = 0;
+static float pid_integral = 0;
+static float last_error = 0;
+
+// Hall sensor ISR
+static void IRAM_ATTR hall_isr_handler(void* arg) {
+    int64_t now = esp_timer_get_time();
+    if (last_hall_time != 0) {
+        hall_period = now - last_hall_time;
+        hall_updated = true;
+    }
+    last_hall_time = now;
+}
+
+// Pedal sensor ISR
+static void IRAM_ATTR pedal_isr_handler(void* arg) {
+    pedaling = true;
+    last_pedal_time = esp_timer_get_time();
+}
+
 void motor_control_init() {
     // Configure DAC for motor control
     dac_output_enable(DAC_CHANNEL_1);
@@ -278,50 +352,6 @@ float calculate_motor_speed() {
     return motor_speed;
 }
 
-void check_turn_signals() {
-    // Check if turn signals are active
-    bool right_signal = gpio_get_level(TURN_SIGNAL_RIGHT);
-    bool left_signal = gpio_get_level(TURN_SIGNAL_LEFT);
-    
-    // Update turn signal states
-    if (right_signal && !right_turn_active) {
-        right_turn_active = true;
-        left_turn_active = false;
-        turn_signal_start_time = esp_timer_get_time();
-    } 
-    else if (left_signal && !left_turn_active) {
-        left_turn_active = true;
-        right_turn_active = false;
-        turn_signal_start_time = esp_timer_get_time();
-    }
-    
-    // Auto-turn-off after timeout
-    int64_t now = esp_timer_get_time();
-    if ((right_turn_active || left_turn_active) && 
-        (now - turn_signal_start_time) > (TURN_SIGNAL_TIMEOUT * 1000)) {
-        right_turn_active = false;
-        left_turn_active = false;
-    }
-}
-
-void check_blind_spots() {
-    bool blind_spot_detected = false;
-    
-    // Right blind spot check (only if right turn signal is active)
-    if (right_turn_active && gpio_get_level(RCWL_RIGHT_GPIO)) {
-        blind_spot_detected = true;
-        ESP_LOGI("BLIND_SPOT", "Right blind spot detected!");
-    }
-    // Left blind spot check (only if left turn signal is active)
-    else if (left_turn_active && gpio_get_level(RCWL_LEFT_GPIO)) {
-        blind_spot_detected = true;
-        ESP_LOGI("BLIND_SPOT", "Left blind spot detected!");
-    }
-    
-    // Control blind spot warning LED
-    gpio_set_level(BLIND_SPOT_LED_GPIO, blind_spot_detected);
-}
-
 void motor_control_task(void *pvParameters) {
     float target_speed = 0;
     float current_speed_rpm = 0;
@@ -374,21 +404,17 @@ void motor_control_task(void *pvParameters) {
     }
 }
 
-// RFID callback
-static void on_rfid_detection(void *arg, esp_event_base_t base,
-                int32_t event_id, void *data) {
-    rc522_picc_state_changed_event_t *event = (rc522_picc_state_changed_event_t *)data;
-    rc522_picc_t *picc = event->picc;
-
-    if (waiting_tag && picc->state == RC522_PICC_STATE_ACTIVE) {
-        ESP_LOGI("RFID", "Authorized TAG detected - Activating system");
-        system_activated = true;
-        waiting_tag = false;
-        gpio_set_level(SYSTEM_ACTIVE_LED, 1);
-    }
+//-------------------------------- System Functions --------------------------------
+void shutdown_system() {
+    ESP_LOGI("SYSTEM", "Shutting down system");
+    system_activated = false;
+    waiting_tag = true;
+    set_motor_output(0);
+    gpio_set_level(SYSTEM_ACTIVE_LED, 0);
+    gpio_set_level(BLIND_SPOT_LED_GPIO, 0);
 }
 
-void setup_gpio() {
+void init_gpio() {
     // INPUT Configuration
     gpio_config_t input_conf = {
         .pin_bit_mask = (1ULL << RCWL_RIGHT_GPIO) | (1ULL << RCWL_LEFT_GPIO),
@@ -406,45 +432,15 @@ void setup_gpio() {
     gpio_config(&output_conf);
 }
 
-void shutdown_system() {
-    ESP_LOGI("SYSTEM", "Shutting down system");
-    system_activated = false;
-    waiting_tag = true;
-    set_motor_output(0);
-    gpio_set_level(SYSTEM_ACTIVE_LED, 0);
-    gpio_set_level(BLIND_SPOT_LED_GPIO, 0);
-}
-
+//-------------------------------- Main Application --------------------------------
 void app_main(void) {
     ESP_LOGI("SYSTEM", "E-Bike system initializing");
 
     // Initialize hardware
-    setup_gpio();
+    init_gpio();
     motor_control_init();
     lcd_init();
-
-    // Initialize RFID
-    rc522_spi_config_t driver_config = {
-        .host_id = RC522_SPI_HOST,
-        .bus_config = &(spi_bus_config_t) {
-            .miso_io_num = RC522_MISO_GPIO,
-            .mosi_io_num = RC522_MOSI_GPIO,
-            .sclk_io_num = RC522_SCLK_GPIO,
-        },
-        .dev_config = {
-            .spics_io_num = RC522_SDA_GPIO,
-        },
-        .rst_io_num = RC522_RST_GPIO,
-    };
-    rc522_spi_create(&driver_config, &driver);
-    rc522_driver_install(driver);
-
-    rc522_config_t scanner_config = {
-        .driver = driver,
-    };
-    rc522_create(&scanner_config, &scanner);
-    rc522_register_events(scanner, RC522_EVENT_PICC_STATE_CHANGED, on_rfid_detection, NULL);
-    rc522_start(scanner);
+    rfid_init();
 
     // Initial state
     shutdown_system();
