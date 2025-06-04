@@ -5,16 +5,53 @@
 #include "freertos/task.h"
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
-#include "driver/adc.h"
-#include "driver/dac.h"
+#include "driver/adc.h"  // Using legacy ADC
+#include "driver/dac.h"  // Using legacy DAC
 #include "driver/ledc.h"
 #include "esp_timer.h"
 #include "rc522.h"
 #include "driver/rc522_spi.h"
 #include "rc522_picc.h"
 
-//-------------------------------- System Configuration --------------------------------
-#define SYSTEM_ACTIVE_LED    GPIO_NUM_2
+//-------------------------------- Hardware Configuration --------------------------------
+// System
+#define SYSTEM_ACTIVE_LED    GPIO_NUM_15
+
+// Display
+#define DISPLAY_RST_PIN      GPIO_NUM_21
+#define DISPLAY_CE_PIN       GPIO_NUM_2
+#define DISPLAY_DC_PIN       GPIO_NUM_17
+#define DISPLAY_DIN_PIN      GPIO_NUM_23
+#define DISPLAY_CLK_PIN      GPIO_NUM_18
+#define DISPLAY_SPI_HOST     SPI2_HOST
+
+// RFID
+#define RC522_SPI_HOST       SPI3_HOST
+#define RC522_MISO_GPIO      GPIO_NUM_19
+#define RC522_MOSI_GPIO      GPIO_NUM_23
+#define RC522_SCLK_GPIO      GPIO_NUM_18
+#define RC522_SDA_GPIO       GPIO_NUM_5
+#define RC522_RST_GPIO       GPIO_NUM_4
+
+// Sensors
+#define RCWL_RIGHT_GPIO      GPIO_NUM_33
+#define RCWL_LEFT_GPIO       GPIO_NUM_32
+#define BLIND_SPOT_LED_GPIO  GPIO_NUM_35
+
+// Turn signals
+#define TURN_SIGNAL_RIGHT    GPIO_NUM_14
+#define TURN_SIGNAL_LEFT     GPIO_NUM_13
+
+// Motor control
+#define DAC_OUTPUT_PIN       GPIO_NUM_25
+#define PEDAL_HALL_PIN       GPIO_NUM_27
+#define POTENTIOMETER_PIN    GPIO_NUM_26
+#define ACCELERATOR_PIN      GPIO_NUM_34
+#define HALL1_PIN            GPIO_NUM_3
+#define HALL2_PIN            GPIO_NUM_1
+#define HALL3_PIN            GPIO_NUM_22
+
+//-------------------------------- System Parameters --------------------------------
 #define BATTERY_DIVIDER_RATIO 7.2f
 #define WHEEL_CIRCUMFERENCE   2.1f  // meters
 #define HALL_SENSORS_PER_REV  6
@@ -26,18 +63,33 @@
 #define KI                    0.1
 #define KD                    0.05
 
+//-------------------------------- Global Variables --------------------------------
 static bool system_activated = false;
 static float current_speed = 0.0f;
 static uint8_t assistance_level = 0;
 static float battery_voltage = 0.0f;
 
-//-------------------------------- Display Module --------------------------------
-#define DISPLAY_RST_PIN      GPIO_NUM_21
-#define DISPLAY_CE_PIN       GPIO_NUM_2
-#define DISPLAY_DC_PIN       GPIO_NUM_17
-#define DISPLAY_DIN_PIN      GPIO_NUM_23
-#define DISPLAY_CLK_PIN      GPIO_NUM_18
-#define DISPLAY_SPI_HOST     SPI2_HOST
+// Motor control variables
+static volatile int64_t last_hall_time = 0;
+static volatile int64_t hall_period = 0;
+static volatile bool hall_updated = false;
+static volatile bool pedaling = false;
+static volatile int64_t last_pedal_time = 0;
+static float pid_integral = 0;
+static float last_error = 0;
+
+// Turn signal variables
+static bool right_turn_active = false;
+static bool left_turn_active = false;
+static int64_t turn_signal_start_time = 0;
+
+// RFID variables
+static rc522_handle_t scanner;
+static rc522_driver_handle_t driver;
+static bool waiting_tag = true;
+
+// Display variables
+static spi_device_handle_t display_spi;
 
 // LCD Commands
 #define LCD_CMD     0
@@ -46,8 +98,7 @@ static float battery_voltage = 0.0f;
 #define LCD_SETX    0x80
 #define LCD_DISPLAY_ON 0x0C
 
-static spi_device_handle_t display_spi;
-
+//-------------------------------- Display Functions --------------------------------
 void lcd_send(uint8_t data, uint8_t mode) {
     spi_transaction_t t = {
         .length = 8,
@@ -131,24 +182,20 @@ void update_display() {
     lcd_clear();
     lcd_set_position(0, 0);
     
-    // Battery level
     lcd_print("Batt: ");
     lcd_print_float(battery_voltage, 1);
     lcd_print("V");
     
-    // Speed
     lcd_set_position(0, 1);
     lcd_print("Speed: ");
     lcd_print_float(current_speed, 1);
     lcd_print("km/h");
     
-    // Assistance level
     lcd_set_position(0, 2);
     lcd_print("Assist: ");
     lcd_print_number(assistance_level);
     lcd_print("%");
     
-    // Turn signal indicators
     lcd_set_position(0, 3);
     if (right_turn_active) {
         lcd_print("->");
@@ -157,18 +204,47 @@ void update_display() {
     }
 }
 
+//-------------------------------- Blind Spot Detection --------------------------------
+void check_blind_spots() {
+    bool blind_spot_detected = false;
+    
+    if (right_turn_active && gpio_get_level(RCWL_RIGHT_GPIO)) {
+        blind_spot_detected = true;
+        ESP_LOGI("BLIND_SPOT", "Right blind spot detected!");
+    }
+    else if (left_turn_active && gpio_get_level(RCWL_LEFT_GPIO)) {
+        blind_spot_detected = true;
+        ESP_LOGI("BLIND_SPOT", "Left blind spot detected!");
+    }
+    
+    gpio_set_level(BLIND_SPOT_LED_GPIO, blind_spot_detected);
+}
+
+//-------------------------------- Turn Signal Handling --------------------------------
+void check_turn_signals() {
+    bool right_signal = gpio_get_level(TURN_SIGNAL_RIGHT);
+    bool left_signal = gpio_get_level(TURN_SIGNAL_LEFT);
+    
+    if (right_signal && !right_turn_active) {
+        right_turn_active = true;
+        left_turn_active = false;
+        turn_signal_start_time = esp_timer_get_time();
+    } 
+    else if (left_signal && !left_turn_active) {
+        left_turn_active = true;
+        right_turn_active = false;
+        turn_signal_start_time = esp_timer_get_time();
+    }
+    
+    int64_t now = esp_timer_get_time();
+    if ((right_turn_active || left_turn_active) && 
+        (now - turn_signal_start_time) > (TURN_SIGNAL_TIMEOUT * 1000)) {
+        right_turn_active = false;
+        left_turn_active = false;
+    }
+}
+
 //-------------------------------- RFID Module --------------------------------
-#define RC522_SPI_HOST       SPI3_HOST
-#define RC522_MISO_GPIO      GPIO_NUM_19
-#define RC522_MOSI_GPIO      GPIO_NUM_23
-#define RC522_SCLK_GPIO      GPIO_NUM_18
-#define RC522_SDA_GPIO       GPIO_NUM_5
-#define RC522_RST_GPIO       GPIO_NUM_4
-
-static rc522_handle_t scanner;
-static rc522_driver_handle_t driver;
-static bool waiting_tag = true;
-
 static void on_rfid_detection(void *arg, esp_event_base_t base,
                 int32_t event_id, void *data) {
     rc522_picc_state_changed_event_t *event = (rc522_picc_state_changed_event_t *)data;
@@ -206,81 +282,7 @@ void rfid_init() {
     rc522_start(scanner);
 }
 
-//-------------------------------- Blind Spot Module --------------------------------
-#define RCWL_RIGHT_GPIO      GPIO_NUM_33
-#define RCWL_LEFT_GPIO       GPIO_NUM_32
-#define BLIND_SPOT_LED_GPIO  GPIO_NUM_35
-
-static bool right_turn_active = false;
-static bool left_turn_active = false;
-static int64_t turn_signal_start_time = 0;
-
-void check_blind_spots() {
-    bool blind_spot_detected = false;
-    
-    // Right blind spot check (only if right turn signal is active)
-    if (right_turn_active && gpio_get_level(RCWL_RIGHT_GPIO)) {
-        blind_spot_detected = true;
-        ESP_LOGI("BLIND_SPOT", "Right blind spot detected!");
-    }
-    // Left blind spot check (only if left turn signal is active)
-    else if (left_turn_active && gpio_get_level(RCWL_LEFT_GPIO)) {
-        blind_spot_detected = true;
-        ESP_LOGI("BLIND_SPOT", "Left blind spot detected!");
-    }
-    
-    // Control blind spot warning LED
-    gpio_set_level(BLIND_SPOT_LED_GPIO, blind_spot_detected);
-}
-
-//-------------------------------- Turn Signal Module --------------------------------
-#define TURN_SIGNAL_RIGHT    GPIO_NUM_14
-#define TURN_SIGNAL_LEFT     GPIO_NUM_13
-
-void check_turn_signals() {
-    // Check if turn signals are active
-    bool right_signal = gpio_get_level(TURN_SIGNAL_RIGHT);
-    bool left_signal = gpio_get_level(TURN_SIGNAL_LEFT);
-    
-    // Update turn signal states
-    if (right_signal && !right_turn_active) {
-        right_turn_active = true;
-        left_turn_active = false;
-        turn_signal_start_time = esp_timer_get_time();
-    } 
-    else if (left_signal && !left_turn_active) {
-        left_turn_active = true;
-        right_turn_active = false;
-        turn_signal_start_time = esp_timer_get_time();
-    }
-    
-    // Auto-turn-off after timeout
-    int64_t now = esp_timer_get_time();
-    if ((right_turn_active || left_turn_active) && 
-        (now - turn_signal_start_time) > (TURN_SIGNAL_TIMEOUT * 1000)) {
-        right_turn_active = false;
-        left_turn_active = false;
-    }
-}
-
 //-------------------------------- Motor Control Module --------------------------------
-#define DAC_OUTPUT_PIN       GPIO_NUM_25  // Connected to VSP of driver
-#define PEDAL_HALL_PIN       GPIO_NUM_27
-#define POTENTIOMETER_PIN    GPIO_NUM_26
-#define ACCELERATOR_PIN      GPIO_NUM_34
-#define HALL1_PIN            GPIO_NUM_3
-#define HALL2_PIN            GPIO_NUM_1
-#define HALL3_PIN            GPIO_NUM_22
-
-// Motor control variables
-static volatile int64_t last_hall_time = 0;
-static volatile int64_t hall_period = 0;
-static volatile bool hall_updated = false;
-static volatile bool pedaling = false;
-static volatile int64_t last_pedal_time = 0;
-static float pid_integral = 0;
-static float last_error = 0;
-
 // Hall sensor ISR
 static void IRAM_ATTR hall_isr_handler(void* arg) {
     int64_t now = esp_timer_get_time();
@@ -301,7 +303,7 @@ void motor_control_init() {
     // Configure DAC for motor control
     dac_output_enable(DAC_CHANNEL_1);
     
-    // Setup GPIO interrupts for hall sensors and pedal
+    // Setup GPIO interrupts
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << HALL1_PIN) | (1ULL << HALL2_PIN) | (1ULL << HALL3_PIN) | (1ULL << PEDAL_HALL_PIN),
         .mode = GPIO_MODE_INPUT,
@@ -316,10 +318,10 @@ void motor_control_init() {
     gpio_isr_handler_add(HALL3_PIN, hall_isr_handler, NULL);
     gpio_isr_handler_add(PEDAL_HALL_PIN, pedal_isr_handler, NULL);
     
-    // Configure ADC for potentiometer and accelerator
+    // Configure ADC
     adc1_config_width(ADC_WIDTH_BIT_12);
-    adc1_config_channel_atten(ADC1_CHANNEL_7, ADC_ATTEN_DB_11);  // GPIO26 (potentiometer)
-    adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11);  // GPIO34 (accelerator)
+    adc1_config_channel_atten(ADC1_CHANNEL_7, ADC_ATTEN_DB_11);  // Potentiometer
+    adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11);  // Accelerator
     
     // Configure turn signal inputs
     io_conf.pin_bit_mask = (1ULL << TURN_SIGNAL_RIGHT) | (1ULL << TURN_SIGNAL_LEFT);
@@ -330,11 +332,9 @@ void motor_control_init() {
 }
 
 void set_motor_output(float output) {
-    // Constrain output to 0-1 range
     if (output < 0) output = 0;
     else if (output > 1) output = 1;
     
-    // Convert to 8-bit DAC value (0-255)
     uint8_t dac_value = (uint8_t)(output * 255);
     dac_output_voltage(DAC_CHANNEL_1, dac_value);
 }
@@ -345,8 +345,6 @@ float calculate_motor_speed() {
         float frequency_hz = 1000000.0f / (float)hall_period;
         motor_speed = (frequency_hz / HALL_SENSORS_PER_REV) * 60.0f; // RPM
         hall_updated = false;
-        
-        // Convert RPM to km/h for display
         current_speed = (motor_speed * WHEEL_CIRCUMFERENCE) / 60.0f;
     }
     return motor_speed;
@@ -357,46 +355,36 @@ void motor_control_task(void *pvParameters) {
     float current_speed_rpm = 0;
     
     while (1) {
-        // Check turn signals and blind spots
         check_turn_signals();
         check_blind_spots();
         
-        // Read sensors
         current_speed_rpm = calculate_motor_speed();
         int pot_value = adc1_get_raw(ADC1_CHANNEL_7);
         int accel_value = adc1_get_raw(ADC1_CHANNEL_6);
         
-        // Calculate assistance level (30-80%)
         assistance_level = 30 + (pot_value * 50) / 4095;
         
-        // Check if pedaling recently
         bool active_pedaling = (esp_timer_get_time() - last_pedal_time) < (PEDAL_TIMEOUT_MS * 1000);
-        
-        // Calculate motor output
         float motor_output = 0;
         
-        // Direct accelerator override
         float accelerator = (float)accel_value / 4095.0f;
         if (accelerator > 0.1f) {
             motor_output = accelerator;
-            pid_integral = 0; // Reset PID on direct accelerator use
+            pid_integral = 0;
         } 
-        // PID control when pedaling
         else if (active_pedaling && pedaling) {
             target_speed = (MAX_SPEED_RPM * assistance_level) / 100.0f;
             float error = target_speed - current_speed_rpm;
             
-            // PID calculation
             pid_integral += error * (PID_UPDATE_MS / 1000.0f);
             float derivative = (error - last_error) / (PID_UPDATE_MS / 1000.0f);
             
             motor_output = KP * error + KI * pid_integral + KD * derivative;
-            motor_output = motor_output / MAX_SPEED_RPM; // Normalize
+            motor_output = motor_output / MAX_SPEED_RPM;
             
             last_error = error;
         }
         
-        // Apply motor output
         set_motor_output(motor_output);
         pedaling = false;
         
@@ -415,7 +403,6 @@ void shutdown_system() {
 }
 
 void init_gpio() {
-    // INPUT Configuration
     gpio_config_t input_conf = {
         .pin_bit_mask = (1ULL << RCWL_RIGHT_GPIO) | (1ULL << RCWL_LEFT_GPIO),
         .mode = GPIO_MODE_INPUT,
@@ -424,7 +411,6 @@ void init_gpio() {
     };
     gpio_config(&input_conf);
 
-    // OUTPUT Configuration
     gpio_config_t output_conf = {
         .pin_bit_mask = (1ULL << BLIND_SPOT_LED_GPIO) | (1ULL << SYSTEM_ACTIVE_LED),
         .mode = GPIO_MODE_OUTPUT
@@ -436,13 +422,11 @@ void init_gpio() {
 void app_main(void) {
     ESP_LOGI("SYSTEM", "E-Bike system initializing");
 
-    // Initialize hardware
     init_gpio();
     motor_control_init();
     lcd_init();
     rfid_init();
 
-    // Initial state
     shutdown_system();
     lcd_clear();
     lcd_set_position(0, 0);
@@ -450,15 +434,12 @@ void app_main(void) {
     lcd_set_position(0, 1);
     lcd_print("Scan to activate");
 
-    // Create motor control task
     xTaskCreate(motor_control_task, "motor_control", 4096, NULL, 5, NULL);
 
     while(1) {
         if (system_activated) {
-            // Update display
             update_display();
         }
-
         vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
