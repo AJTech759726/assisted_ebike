@@ -1,4 +1,4 @@
-# Firmware v2.0
+# Firmware v2.1
 
 Second version of the smart bicycle assistance system firmware.  
 Now includes full integration of all hardware, sensor fusion, PID motor control, and system state management.
