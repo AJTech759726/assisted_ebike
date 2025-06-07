@@ -107,7 +107,7 @@ assisted_ebike_project/
 │   ├── main/             	# Main ESP32 application source code
 │   │   ├── main.c
 │   │   └── CMakeLists.txt
-│   ├── managed_components/           	# Libraries of required components
+│   ├── managed_components/     # Libraries of required components
 │   │   └── abobija__rc522/
 │   └── CMakeLists.txt
 ├── hardware/                  	# Hardware diagrams and schematics
