@@ -82,7 +82,7 @@ Located in the [`hardware/`](./hardware/) directory:
 |			 |				      | GPIO 4 (RST)	 | Module reset				  |
 | 📡 RCWL-0516 (1)       | Blind spot sensor (right)          | GPIO 33          | Digital output                         |
 | 📡 RCWL-0516 (2)       | Blind spot sensor (left)           | GPIO 32          | Digital output                         |
-| 💡 Blind spot LED      | Warning light for blind spots      | GPIO 35          | Controlled via software (HIGH/LOW)     |
+| 💡 Blind spot LED      | Warning light for blind spots      | GPIO 16          | Controlled via software (HIGH/LOW)     |
 | ⚙️  BLDC driver         | PWM signal input (VSP)             | GPIO 25          | Control signal to driver               |
 | 🧲 Trigger 		 | Accelerator trigger (analog)	      | GPIO 34		 | ADC input to read trigger position     |
 | 🎛️ Potentiometer	 | Assistance level control (analog)  | GPIO 26		 | ADC input to set motor assist level    |
@@ -182,7 +182,7 @@ Press ```Ctrl+]``` to exit monitor mode.
 - [x] ⚙️  Connect and test the BLDC driver
 - [x] 🧠 Develop assistance logic
 - [x] 🛠️ Integrate all modules into the system
-- [ ] 🧪 Perform integration tests on the bicycle
+- [x] 🧪 Perform integration tests on the bicycle
 - [x] 📦 Document all physical connections
 - [x] 📝 Add connection diagram to README
 
